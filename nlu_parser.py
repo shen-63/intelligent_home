@@ -204,19 +204,54 @@ SPLIT_PATTERNS: List[str] = [
 ]
 
 
+# 多设备泛化引用：将"所有窗帘"、"全部灯"等映射为 .all 后缀的虚拟设备ID
+_ALL_DEVICE_TYPE_MAP: List[Tuple[str, str, str]] = [
+    # (匹配模式, 泛化设备ID, 中文显示名)
+    (r"(?:所有|全部|一切|所有的)(?:窗帘)", "curtain.all", "所有窗帘"),
+    (r"(?:所有|全部|一切|所有的)(?:灯)", "light.all", "所有灯"),
+    (r"(?:所有|全部|一切|所有的)(?:空调)", "ac.all", "所有空调"),
+    (r"(?:所有|全部|一切|所有的)(?:电视)", "tv.all", "所有电视"),
+    (r"(?:全屋|全部)(?:窗帘)", "curtain.all", "所有窗帘"),
+    (r"(?:全屋|全部)(?:灯)", "light.all", "所有灯"),
+]
+
+
+def _detect_all_device_refs(text: str) -> List[Tuple[int, int, str, str]]:
+    """检测文本中的多设备泛化引用，返回 [(start, end, device_id, raw_name), ...]"""
+    refs: List[Tuple[int, int, str, str]] = []
+    for pattern, dev_id, display in _ALL_DEVICE_TYPE_MAP:
+        for m in re.finditer(pattern, text):
+            refs.append((m.start(), m.end(), dev_id, display))
+    # 去重：短名称被长名称包含时只保留长名称
+    filtered: List[Tuple[int, int, str, str]] = []
+    for s, e, did, name in sorted(refs, key=lambda x: x[0]):
+        overlaps = False
+        for fs, fe, _, _ in filtered:
+            if s >= fs and e <= fe:
+                overlaps = True
+                break
+        if not overlaps:
+            filtered.append((s, e, did, name))
+    return filtered
+
+
 def parse_multi_intent(text: str, session_id: str = "") -> List[Dict[str, Any]]:
     """
     将包含多个设备指令的文本拆分为独立子意图。
     支持上下文追踪：当文本中没有设备词时，使用上一次操作的设备。
     支持取消指令：当文本是取消命令时，自动对上一个设备执行关闭操作。
+    支持语义触发：隐式意图（"客厅好黑"→开灯）优先于上下文兜底。
+    支持多设备泛化引用："所有窗帘和电视"→ curtain.all + tv.all。
 
     例如：
     - "把客厅空调关闭，把卧室电视关闭"
       → [("客厅空调", "off"), ("卧室电视", "off")]
     - 用户之前操作了卧室空调，现在说"调到24度"
       → [("bedroom_ac", "set", temperature=24)]
-    - 用户之前说要开卧室灯，现在说"算了，先不开"
-      → [("bedroom_light", "off")]
+    - "客厅好黑" → 语义触发
+      → [("living_room_light", "on")]
+    - "打开所有窗帘和电视"
+      → [("curtain.all", "on"), ("tv.all", "on")]
     """
     text = text.strip()
 
@@ -244,8 +279,6 @@ def parse_multi_intent(text: str, session_id: str = "") -> List[Dict[str, Any]]:
     if is_cancel_command(text) and session_id:
         last_dev = get_last_device(session_id)
         if last_dev:
-            # 对上一个设备执行关闭操作
-            dev_type = last_dev.split("_")[1] if "_" in last_dev else last_dev
             device_name_map = {
                 "bedroom_ac": "卧室空调", "living_room_ac": "客厅空调",
                 "bedroom_light": "卧室灯", "living_room_light": "客厅灯",
@@ -261,50 +294,7 @@ def parse_multi_intent(text: str, session_id: str = "") -> List[Dict[str, Any]]:
                 "attrs": {},
             }]
 
-    intents: List[Dict[str, Any]] = []
-
-    # 找到所有设备出现的位置（去重：短名称被长名称包含时只保留长名称）
-    device_positions: List[Tuple[int, int, str, str]] = []  # (start_pos, end_pos, device_id, raw_name)
-    for raw_name, dev_id in DEVICE_MAP:
-        start = 0
-        while True:
-            pos = text.find(raw_name, start)
-            if pos == -1:
-                break
-            # 检查是否被已有的更长匹配覆盖
-            end = pos + len(raw_name)
-            overlaps = False
-            for s, e, _, _ in device_positions:
-                if pos >= s and end <= e:
-                    overlaps = True
-                    break
-            if not overlaps:
-                device_positions.append((pos, end, dev_id, raw_name))
-            start = pos + len(raw_name)
-
-    # 如果没有找到设备，检查是否是上下文指令（如"调到24度"）
-    if not device_positions and session_id:
-        last_dev = get_last_device(session_id)
-        if last_dev:
-            # 尝试用上下文设备解析
-            result = parse_intent_with_device(text, last_dev)
-            if result["success"] and result["intent"]:
-                return [result["intent"]]
-            # 如果失败，尝试添加设备词再解析
-            device_name_map = {
-                "bedroom_ac": "卧室空调", "living_room_ac": "客厅空调",
-                "bedroom_light": "卧室灯", "living_room_light": "客厅灯",
-                "bedroom_curtain": "卧室窗帘", "living_room_curtain": "客厅窗帘",
-                "bedroom_tv": "卧室电视", "living_room_tv": "客厅电视",
-            }
-            dev_name = device_name_map.get(last_dev, "")
-            if dev_name:
-                combined_text = f"{dev_name} {text}"
-                result = parse_intent(combined_text)
-                if result["success"] and result["intent"]:
-                    return [result["intent"]]
-
-    # 语义触发：当没有设备名但有环境状态描述时，推断设备
+    # ========== 语义触发：优先级最高，在上下文兜底之前 ==========
     # "很黑"/"太暗"/"好黑" → 灯；"很热" → 空调(cool)；"很冷" → 空调(heat)
     semantic_device_map = [
         # 光照 → 灯
@@ -322,23 +312,18 @@ def parse_multi_intent(text: str, session_id: str = "") -> List[Dict[str, Any]]:
 
     for pattern, dev_type, act, *rest in semantic_device_map:
         if re.search(pattern, text):
-            # 查找该类型的设备
             candidates = [(k, v) for k, v in DEVICE_STATES.items() if v.get("type") == dev_type]
             if candidates:
-                # 先检查用户是否提到了房间位置
                 mentioned_bedroom = bool(re.search(r'卧室|房间|屋里|里面', text))
                 mentioned_livingroom = bool(re.search(r'客厅|大厅|外面', text))
 
                 if mentioned_bedroom:
-                    # 用户提到卧室 → 选卧室设备
                     room_devices = [(k, v) for k, v in candidates if v.get("room") == "卧室"]
                     target = room_devices[0] if room_devices else candidates[0]
                 elif mentioned_livingroom:
-                    # 用户提到客厅 → 选客厅设备
                     room_devices = [(k, v) for k, v in candidates if v.get("room") == "客厅"]
                     target = room_devices[0] if room_devices else candidates[0]
                 else:
-                    # 没提房间 → 默认选客厅设备
                     living_room = [(k, v) for k, v in candidates if v.get("room") == "客厅"]
                     target = living_room[0] if living_room else candidates[0]
 
@@ -359,7 +344,55 @@ def parse_multi_intent(text: str, session_id: str = "") -> List[Dict[str, Any]]:
                 if rest:
                     intent["attrs"]["mode"] = rest[0]
                 print(f"[NLU] 语义触发: '{text}' → {display} ({act})")
+                if session_id:
+                    set_last_device(session_id, dev_id)
                 return [intent]
+
+    # ========== 找到所有设备出现的位置 ==========
+    device_positions: List[Tuple[int, int, str, str]] = []
+
+    # 1. 多设备泛化引用（"所有窗帘"、"全部灯"等）
+    all_refs = _detect_all_device_refs(text)
+    device_positions.extend(all_refs)
+
+    # 2. 具体设备名（去重：短名称被长名称或泛化引用包含时只保留长名称）
+    for raw_name, dev_id in DEVICE_MAP:
+        start = 0
+        while True:
+            pos = text.find(raw_name, start)
+            if pos == -1:
+                break
+            end = pos + len(raw_name)
+            overlaps = False
+            for s, e, _, _ in device_positions:
+                if pos >= s and end <= e:
+                    overlaps = True
+                    break
+            if not overlaps:
+                device_positions.append((pos, end, dev_id, raw_name))
+            start = pos + len(raw_name)
+
+    # 如果没有找到设备，检查是否是上下文指令（如"调到24度"）
+    if not device_positions and session_id:
+        last_dev = get_last_device(session_id)
+        if last_dev:
+            result = parse_intent_with_device(text, last_dev)
+            if result["success"] and result["intent"]:
+                return [result["intent"]]
+            device_name_map = {
+                "bedroom_ac": "卧室空调", "living_room_ac": "客厅空调",
+                "bedroom_light": "卧室灯", "living_room_light": "客厅灯",
+                "bedroom_curtain": "卧室窗帘", "living_room_curtain": "客厅窗帘",
+                "bedroom_tv": "卧室电视", "living_room_tv": "客厅电视",
+            }
+            dev_name = device_name_map.get(last_dev, "")
+            if dev_name:
+                combined_text = f"{dev_name} {text}"
+                result = parse_intent(combined_text)
+                if result["success"] and result["intent"]:
+                    return [result["intent"]]
+
+    intents: List[Dict[str, Any]] = []
 
     if not device_positions:
         return []
@@ -368,19 +401,39 @@ def parse_multi_intent(text: str, session_id: str = "") -> List[Dict[str, Any]]:
     device_positions.sort(key=lambda x: x[0])
 
     if len(device_positions) == 1:
+        pos, end_pos, dev_id, raw_name = device_positions[0]
+        # 泛化引用（.all 后缀）直接用整句解析，让 _match_action 提取动作
+        if dev_id.endswith(".all"):
+            result = parse_intent(text)
+            if result["success"] and result["intent"]:
+                intent = result["intent"]
+                # 强制替换为泛化设备ID
+                intent["device_id"] = dev_id
+                intent["device_name"] = raw_name
+                if session_id:
+                    set_last_device(session_id, dev_id)
+                return [intent]
+            return []
+
         # 单设备，直接用整句解析
         result = parse_intent(text)
         if result["success"] and result["intent"]:
             intent = result["intent"]
-            # 记录最后操作的设备
             if session_id:
                 set_last_device(session_id, intent.get("device_id", ""))
             return [intent]
         return []
 
     # 多设备：按位置切分文本片段
+    # 提取首设备之前的前缀文本（含公共动作，如"打开所有窗帘和电视"的"打开"）
+    first_pos = device_positions[0][0]
+    prefix_text = text[:first_pos]
+    prefix_action = _match_action(prefix_text) if prefix_text else "unknown"
+    if prefix_action == "unknown":
+        prefix_action = None
+
+    prev_action = prefix_action  # 初始化为前缀中的动作
     for i, (pos, end_pos, dev_id, raw_name) in enumerate(device_positions):
-        # 提取从当前设备到下一个设备之间的文本
         if i + 1 < len(device_positions):
             next_pos = device_positions[i + 1][0]
             sub_text = text[pos:next_pos]
@@ -397,7 +450,23 @@ def parse_multi_intent(text: str, session_id: str = "") -> List[Dict[str, Any]]:
 
         result = parse_intent(sub_text)
         if result["success"] and result["intent"]:
+            # 如果是泛化引用，强制替换 device_id
+            if dev_id.endswith(".all"):
+                result["intent"]["device_id"] = dev_id
+                result["intent"]["device_name"] = raw_name
             intents.append(result["intent"])
+            prev_action = result["intent"].get("action")
+        elif prev_action:
+            # 子片段无动作，复用上一个/前缀的动作
+            fallback_intent = {
+                "device_id": dev_id,
+                "device_name": raw_name,
+                "action": prev_action,
+                "value": None,
+                "value_type": None,
+                "attrs": {},
+            }
+            intents.append(fallback_intent)
 
     # 记录最后操作的设备
     if intents and session_id:

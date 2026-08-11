@@ -1739,8 +1739,8 @@ async def voice_to_speech_reply(
 
         # 获取回复文本
         reply_text = ""
-        if mode == "smart":
-            # Smart 模式：本地大脑（意图路由 + 设备控制 + RAG 知识问答）
+        if mode in ("smart", "dify"):
+            # Smart 模式 / Dify 模式：统一走本地大脑（意图路由 + 设备控制 + RAG）
             from smart_brain import process_with_scene
             print(f"[SmartBrain] 调用本地大脑...")
             brain_result = await process_with_scene(recognized_text, session_id)
@@ -1842,8 +1842,8 @@ async def text_chat(
     try:
         # 获取回复文本
         reply_text = ""
-        if mode == "smart":
-            # Smart 模式：本地大脑（意图路由 + 设备控制 + RAG 知识问答）
+        if mode in ("smart", "dify"):
+            # Smart 模式 / Dify 模式：统一走本地大脑（意图路由 + 设备控制 + RAG）
             from smart_brain import process_with_scene
             print(f"[SmartBrain] 调用本地大脑...")
             brain_result = await process_with_scene(text, session_id)
