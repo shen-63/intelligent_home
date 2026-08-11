@@ -10,6 +10,95 @@ _last_device_context: Dict[str, str] = {}  # session_id -> device_id
 CANCEL_KEYWORDS = ["算了", "不要了", "先不开", "不用了", "算了吧", "算了", "不要", "不用", "取消"]
 
 
+# ==================== 属性→设备类型 强绑定（避免"风速"→灯 这种误识别）====================
+# 只要文本中出现这些属性词，并且没有显式设备名，就推断对应设备类型
+ATTR_DEVICE_TYPE_BINDING: Dict[str, str] = {
+    # --- 空调专属：出现任何一个 → 设备类型 ac ---
+    "风速": "ac", "风力": "ac", "风量": "ac", "风档": "ac", "档位": "ac",
+    "扫风": "ac", "摆风": "ac", "风向": "ac",
+    "温度": "ac", "制冷": "ac", "制热": "ac", "除湿": "ac", "送风": "ac", "模式": "ac",
+    # --- 灯专属 ---
+    "亮度": "light", "明度": "light",
+    # --- TV专属 ---
+    "音量": "tv", "声音": "tv", "声量": "tv", "频道": "tv",
+}
+
+# 属性 → intent 中对应的状态字段名
+ATTR_TO_STATE_FIELD: Dict[str, str] = {
+    "温度": "temperature",
+    "风速": "fan_speed", "风力": "fan_speed", "风量": "fan_speed", "风档": "fan_speed", "档位": "fan_speed",
+    "亮度": "brightness", "明度": "brightness",
+    "音量": "volume", "声音": "volume", "声量": "volume",
+    "频道": "channel",
+}
+
+# 每个状态字段的【默认边界】（可被 handle_delta_control 里的 DEVICE_BOUNDS 覆盖）
+DEFAULT_FIELD_BOUNDS: Dict[str, Tuple[int, int]] = {
+    "temperature": (16, 30),
+    "fan_speed": (1, 5),
+    "brightness": (0, 100),
+    "volume": (0, 100),
+    "channel": (1, 999),
+}
+
+# ==================== 增量/相对控制词典 ====================
+# 正向增量（调高/加大/亮一点 等）→ delta 为正
+_DELTA_POSITIVE_KEYWORDS: List[str] = [
+    "调高", "升高", "加大", "调大", "增强", "调亮", "开大",
+    "大一点", "大一些", "高一点", "高一些", "亮一点", "亮一些",
+    "大一档", "升一档", "往上调", "向上调", "提高",
+]
+# 负向增量（调低/减小/暗一点 等）→ delta 为负
+_DELTA_NEGATIVE_KEYWORDS: List[str] = [
+    "调低", "降低", "减小", "调小", "减弱", "调暗", "关小",
+    "小一点", "小一些", "低一点", "低一些", "暗一点", "暗一些",
+    "小一档", "降一档", "往下调", "向下调",
+]
+# 增量调节的默认步长（单位：1 档 / 1℃ / 1%）
+DELTA_DEFAULT_STEP = 1
+
+
+def _detect_delta_polarity(text: str) -> int:
+    """检测文本中增量的正负方向。返回 +1（增）、-1（减）、0（没检测到）。"""
+    if any(kw in text for kw in _DELTA_POSITIVE_KEYWORDS):
+        return +1
+    if any(kw in text for kw in _DELTA_NEGATIVE_KEYWORDS):
+        return -1
+    return 0
+
+
+def _extract_number(text: str) -> Optional[int]:
+    """从文本中提取第一个阿拉伯数字/中文数字（支持一~五/两），找不到返回 None。"""
+    # 阿拉伯数字
+    m = re.search(r'(\d+)', text)
+    if m:
+        return int(m.group(1))
+    # 中文数字（只取1~5 范围内常用的）
+    cn_num = {"一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9, "十": 10}
+    for ch, val in cn_num.items():
+        if ch in text:
+            return val
+    return None
+
+
+def _detect_delta_attr_and_field(text: str) -> Tuple[Optional[str], Optional[str]]:
+    """
+    根据文本中的属性词，推断要做增量调节的属性（中文）和 状态字段名（英文）。
+    返回 (attr_cn, state_field)，例如 ("温度", "temperature")。
+    """
+    # 优先按出现顺序匹配（匹配多个时取第一个出现的）
+    best_pos: Optional[int] = None
+    best_attr: Optional[str] = None
+    for kw in ATTR_DEVICE_TYPE_BINDING:
+        pos = text.find(kw)
+        if pos >= 0 and (best_pos is None or pos < best_pos):
+            best_pos = pos
+            best_attr = kw
+    if best_attr is None:
+        return None, None
+    return best_attr, ATTR_TO_STATE_FIELD.get(best_attr)
+
+
 def set_last_device(session_id: str, device_id: str):
     """记录会话最后操作的设备"""
     _last_device_context[session_id] = device_id
@@ -163,6 +252,110 @@ def _match_device(text: str) -> Tuple[Optional[str], Optional[str]]:
         if raw_name in text:
             return dev_id, raw_name
     return None, None
+
+
+def _infer_device_by_attrs_room(text: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    """
+    当文本里没有显式设备名（"卧室空调/客厅灯"）时，
+    通过属性强绑定 + 房间名，推断目标设备。
+
+    Returns:
+        (device_id, device_display_name, bound_device_type)
+        例如 "卧室风速调大一档" → ("bedroom_ac", "卧室空调", "ac")
+             "客厅亮度调低"  → ("living_room_light", "客厅灯", "light")
+             推断不出 → (None, None, None)
+    """
+    # 1) 先看属性是否能绑定设备类型
+    bound_type_list: List[str] = []
+    for kw, t in ATTR_DEVICE_TYPE_BINDING.items():
+        if kw in text:
+            bound_type_list.append(t)
+    if not bound_type_list:
+        return None, None, None
+    bound_type = bound_type_list[0]  # 取第一个命中的属性绑定类型
+
+    # 2) 再看有没有房间名
+    mentioned_bedroom = bool(re.search(r'卧室|主卧|房间|屋里|里面', text))
+    mentioned_livingroom = bool(re.search(r'客厅|大厅|起居室', text))
+
+    if mentioned_bedroom and mentioned_livingroom:
+        return None, None, bound_type  # 歧义：用户同时提了两个房间，交给上下文处理
+
+    prefer_room = "卧室" if mentioned_bedroom else ("客厅" if mentioned_livingroom else None)
+
+    # 3) 在 DEVICE_STATES 里找：type == bound_type 且 room == prefer_room（或 room 任意）
+    candidates: List[Tuple[str, Dict[str, Any]]] = [
+        (k, v) for k, v in DEVICE_STATES.items() if v.get("type") == bound_type
+    ]
+    if not candidates:
+        return None, None, bound_type
+
+    # 优先选 prefer_room 匹配的
+    if prefer_room:
+        for k, v in candidates:
+            if v.get("room") == prefer_room:
+                room = v.get("room", "")
+                cn_type = {"ac": "空调", "light": "灯", "tv": "电视", "curtain": "窗帘"}.get(bound_type, "设备")
+                return k, f"{room}{cn_type}", bound_type
+
+    # 没指定房间，返回第一个（卧室优先，通常在 DEVICE_STATES 排前面）
+    k, v = candidates[0]
+    room = v.get("room", "")
+    cn_type = {"ac": "空调", "light": "灯", "tv": "电视", "curtain": "窗帘"}.get(bound_type, "设备")
+    return k, f"{room}{cn_type}", bound_type
+
+
+def parse_delta(text: str) -> Optional[Dict[str, Any]]:
+    """
+    增量/相对控制解析器。
+    从"卧室温度调高2度"、"风速调大一些"这类文本中抽取增量控制元信息。
+
+    Returns:
+        None → 不是增量控制
+        {
+            "control_mode": "delta",       # 固定
+            "delta_value": int,            # ±N（例如 +2、-1）
+            "attr_cn": str,                # 中文属性："温度"/"风速"/"亮度"...
+            "attr_field": str,             # 状态字段："temperature"/"fan_speed"/"brightness"...
+            "bound_type": Optional[str],   # 推断的设备类型："ac"/"light"/"tv"
+            "is_qualitative": bool,        # True=模糊（大一点/小一点），False=显式数字（2度）
+        }
+    """
+    polarity = _detect_delta_polarity(text)
+    if polarity == 0:
+        return None
+    attr_cn, attr_field = _detect_delta_attr_and_field(text)
+    if attr_field is None:
+        # 没属性词，但如果是"大一档"/"小一档"这种通用相对档位，尝试从已有属性绑定（或 AC_FAN_MAP 类似）推
+        fan_like = re.search(r'[大小高低升]{1,2}(一|二|两|三|四|五|1|2|3|4|5)?档', text)
+        if fan_like:
+            attr_cn = "风力"
+            attr_field = "fan_speed"
+        else:
+            return None
+    # 绑定类型
+    bound_type = ATTR_DEVICE_TYPE_BINDING.get(attr_cn) if attr_cn else None
+
+    # 数字提取：如"调高2度" → 2；没数字 → 默认步长 DELTA_DEFAULT_STEP
+    num = _extract_number(text)
+    if num is not None:
+        delta = polarity * num
+        is_qualitative = False
+    else:
+        delta = polarity * DELTA_DEFAULT_STEP
+        is_qualitative = True
+
+    # 安全：delta 不能太离谱（单次调整最多 ±10 档/度）
+    delta = max(-10, min(10, delta))
+
+    return {
+        "control_mode": "delta",
+        "delta_value": delta,
+        "attr_cn": attr_cn,
+        "attr_field": attr_field,
+        "bound_type": bound_type,
+        "is_qualitative": is_qualitative,
+    }
 
 
 def _match_action(text: str) -> str:
@@ -521,6 +714,11 @@ def parse_intent(text: str) -> Dict[str, Any]:
     基于规则的意图解析。
     输出 schema 稳定，后续替换为 LLM 实现时保持此接口不变。
 
+    【新增增量控制】如果检测到相对词（调高/调小/大一点 等）：
+        intent["control_mode"] = "delta"
+        intent["delta"] = {"delta_value": ±N, "attr_field": "temperature"/"fan_speed"...}
+    否则默认 intent["control_mode"] = "absolute"
+
     Returns:
         {
             "success": bool,
@@ -534,14 +732,32 @@ def parse_intent(text: str) -> Dict[str, Any]:
                 "device_name": str,
                 "action": str,
                 "value": Any,
-                "value_type": str
+                "value_type": str,
+                "attrs": dict,
+                "control_mode": "absolute" | "delta",
+                "delta": dict | None,
             } | None
         }
     """
     text = text.strip()
+
+    # 1) 尝试【显式设备名】匹配：卧室空调/客厅灯 等
     target_device_id, target_device_raw = _match_device(text)
+    inferred_by_attr = False
+
+    # 2) 如果显式设备没命中，尝试【属性强绑定 + 房间名】推断（比如"卧室风速调大一档"里没有"空调"二字）
+    if target_device_id is None:
+        inferred_id, inferred_name, bound_type = _infer_device_by_attrs_room(text)
+        if inferred_id is not None:
+            target_device_id = inferred_id
+            target_device_raw = inferred_name
+            inferred_by_attr = True
+
     action = _match_action(text)
     value, value_type = _match_value(text)
+
+    # 3) 增量控制解析（必须在动作匹配之后，因为 parse_delta 能告诉我们更细的控制意图）
+    delta_info = parse_delta(text)
 
     # 未识别到设备
     if not target_device_id:
@@ -562,7 +778,8 @@ def parse_intent(text: str) -> Dict[str, Any]:
     if target_device_id.endswith("_ac") or target_device_id == "air_conditioner":
         ac_attrs = _extract_ac_attrs(text)
 
-    # 构建 intent 基础结构
+    # 构建 intent 基础结构（control_mode 字段）
+    control_mode = delta_info["control_mode"] if delta_info else "absolute"
     base_intent = {
         "raw_text": text,
         "device_id": target_device_id,
@@ -571,13 +788,23 @@ def parse_intent(text: str) -> Dict[str, Any]:
         "value": value,
         "value_type": value_type,
         "attrs": ac_attrs,
+        "control_mode": control_mode,
+        "delta": delta_info,  # None 或 {"control_mode":"delta","delta_value":±N,...}
+        "_inferred_by_attr": inferred_by_attr,
     }
 
-    # 未识别到动作，但有额外属性
+    # 如果是 delta 控制，且 action 还没定 → 用 increase/decrease
+    if control_mode == "delta" and action == "unknown":
+        base_intent["action"] = "increase" if (delta_info and delta_info["delta_value"] > 0) else "decrease"
+
+    # 未识别到动作，但有额外属性 或 是 delta 控制
     if action == "unknown":
-        if ac_attrs:
-            # 有空调属性也算有效意图
-            base_intent["action"] = "set"
+        if ac_attrs or delta_info is not None:
+            # 有空调属性 或 增量控制 → 也算有效意图
+            if delta_info is not None and control_mode == "delta":
+                base_intent["action"] = "increase" if delta_info["delta_value"] > 0 else "decrease"
+            else:
+                base_intent["action"] = "set"
         else:
             return {
                 "success": False,
@@ -588,7 +815,7 @@ def parse_intent(text: str) -> Dict[str, Any]:
                 "intent": base_intent,
             }
 
-    confidence = 0.6 if need_clarification else 0.9
+    confidence = 0.6 if need_clarification else (0.8 if inferred_by_attr else 0.9)
 
     return {
         "success": True,

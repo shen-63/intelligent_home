@@ -48,6 +48,46 @@ _AC_ATTRIBUTE_KEYWORDS = [
     "扫风", "摆风", "风向",
 ]
 
+# ==================== 相对控制（增量控制）信号 ====================
+# 描述"调高/调低"这类相对变化的词，通常伴随属性（温度、风速、亮度、音量等）
+_DELTA_ACTION_KEYWORDS = [
+    "调高", "调低", "升高", "降低",
+    "加大", "减小", "调大", "调小",
+    "增强", "减弱",
+    "大一点", "小一点", "大一些", "小一些",
+    "高一点", "低一点", "高一些", "低一些",
+    "亮一点", "暗一点", "亮一些", "暗一些",
+    "大一档", "小一档", "升一档", "降一档",
+    "往上调", "往下调", "向上调", "向下调",
+]
+
+# 可做"增量调节"的属性关键词（一旦与相对词同时出现，必是设备控制）
+_DELTA_ATTRIBUTE_KEYWORDS = [
+    # 空调/风扇类
+    "温度", "风速", "风力", "风量", "风档", "档位",
+    # 灯类
+    "亮度", "明度",
+    # 音频/TV类
+    "音量", "声音", "声量",
+    # 通用
+    "度数", "温度值",
+]
+
+# 属性 -> 强绑定设备类型（避免"风速"被误识别为"灯"）
+_ATTR_DEVICE_TYPE_BINDING: dict = {
+    # 空调专属（任何匹配即设备类型=ac）
+    "风速": "ac", "风力": "ac", "风量": "ac", "风档": "ac",
+    "扫风": "ac", "摆风": "ac", "风向": "ac",
+    "温度": "ac", "制冷": "ac", "制热": "ac", "除湿": "ac", "送风": "ac",
+    # 灯专属
+    "亮度": "light", "明度": "light",
+    # TV专属
+    "音量": "tv", "声音": "tv", "声量": "tv", "频道": "tv",
+}
+
+# 可被"属性推断设备"的泛化/具体设备ID白名单
+_ROOM_KEYWORDS = ["卧室", "主卧", "房间", "屋内", "里面", "客厅", "大厅", "起居室"]
+
 # 环境感知词（"很热"、"太暗"等隐式触发设备控制）
 # 注意：此列表与 nlu_parser 的语义触发器保持一致
 _ENV_KEYWORDS = [
@@ -56,9 +96,6 @@ _ENV_KEYWORDS = [
     r'(?:需要|想要|想|要)(?:开|启动|打开)',
     r'(?:空调|灯|电视|窗帘).*(?:没|未|不)(?:工作|开|启动|反应|亮)',
 ]
-
-# 房间关键词（与环境词配合提高置信度）
-_ROOM_KEYWORDS = ["卧室", "主卧", "房间", "屋内", "里面", "客厅", "大厅", "起居室"]
 
 # ==================== 天气查询关键词 ====================
 _WEATHER_KEYWORDS = ["天气", "气温", "温度", "下雨", "刮风", "台风", "降雪", "雷电", "雾霾"]
@@ -101,10 +138,13 @@ def route_intent(user_text: str) -> IntentType:
     """
     意图路由：判断用户输入是设备控制还是知识问答。
 
-    策略：
-    1. 优先检测知识问答信号（疑问句式 + 无动作词 → 知识问答）
-    2. 检测设备控制信号（设备词/动作词/场景词/数值/环境感知 → 设备控制）
-    3. 默认安全降级为知识问答
+    策略（优先级从高到低）：
+    1. 💥相对控制指令（调高/调低 + 属性词）→ 强制 device_control，绝不走 RAG
+       （这是最高优先级，因为"调高2度"肯定是控制，而不是聊节能知识）
+    2. 属性强绑定命中（温度/风速/制冷/制热/亮度/音量）→ 强制 device_control
+    3. 优先检测知识问答信号（疑问句式 + 知识领域 → knowledge_qa）
+    4. 检测设备控制信号（设备词/动作词/场景词/数值/环境感知 → 设备控制）
+    5. 默认：非疑问句一律走设备控制，疑问句走知识问答
 
     Returns:
         "device_control" 或 "knowledge_qa"
@@ -114,6 +154,27 @@ def route_intent(user_text: str) -> IntentType:
 
     text = user_text.strip()
 
+    # ==================== 【最高优先级：增量/相对控制】 ====================
+    # 相对词（调高、调小、大一点 等）
+    has_delta = any(kw in text for kw in _DELTA_ACTION_KEYWORDS)
+    # 可增量调节的属性词（温度、风速、亮度、音量 等）
+    has_delta_attr = any(kw in text for kw in _DELTA_ATTRIBUTE_KEYWORDS)
+    # 属性-设备强绑定（比如出现"风速"→设备是空调；出现"亮度"→是灯）
+    bound_type_list = [t for kw, t in _ATTR_DEVICE_TYPE_BINDING.items() if kw in text]
+    has_attr_binding = len(bound_type_list) > 0
+
+    # ✅ 规则1：相对词 + 属性词 → 100% 是设备控制（例如 "卧室温度调高2度"）
+    #          严禁进入 RAG 聊天，否则会答"调高温度可以省电..."
+    if has_delta and has_delta_attr:
+        return "device_control"
+    # ✅ 规则2：相对词 + 有属性绑定 → 也是设备控制（例 "风速调大一些"，即使未写"温度"二字）
+    if has_delta and has_attr_binding:
+        return "device_control"
+    # ✅ 规则3：属性绑定命中（例如含"温度/风速/制冷/制热"）且不是明确疑问句 → 设备控制
+    #          避免"卧室风速调大一档"被误判成卧室灯
+    if has_attr_binding and not any(re.search(p, text) for p in _QUESTION_PATTERNS):
+        return "device_control"
+
     # ---- 检测设备控制信号 ----
     has_device = any(kw in text for kw in _DEVICE_KEYWORDS)
     has_action = any(kw in text for kw in _ACTION_KEYWORDS)
@@ -122,15 +183,17 @@ def route_intent(user_text: str) -> IntentType:
     has_env = any(re.search(p, text) for p in _ENV_KEYWORDS)
     has_ac_attr = any(kw in text for kw in _AC_ATTRIBUTE_KEYWORDS)
     # 空调属性+档位 也视为"有值"，如"风力低档"、"静音模式"
-    has_value = has_value or has_ac_attr and (re.search(r'[低中高大小一二三12345]{1,2}档', text) or "静音" in text or "模式" in text)
+    has_value = has_value or (has_ac_attr or has_attr_binding) and (
+        re.search(r'[低中高大小一二三12345]{1,2}档', text) or "静音" in text or "模式" in text)
 
     # ---- 检测知识问答信号 ----
     has_question = any(re.search(p, text) for p in _QUESTION_PATTERNS)
     has_knowledge_domain = any(kw in text for kw in _KNOWLEDGE_DOMAIN_KEYWORDS)
 
-    # ---- 天气查询：有天气词即可走知识问答轨 ----
+    # ---- 天气查询：有天气词且不是"室温调节"场景才走知识问答 ----
+    #   （注意："温度"二字在 _WEATHER_KEYWORDS 里，但"卧室温度调高2度"显然不是查天气）
     has_weather = any(kw in text for kw in _WEATHER_KEYWORDS)
-    if has_weather and not has_device:
+    if has_weather and not has_device and not has_attr_binding and not has_delta and not has_delta_attr:
         return "knowledge_qa"
 
     # 优先检测知识问答：有疑问词 + 知识领域关键词 → 知识问答（即使提到设备名）
@@ -147,8 +210,6 @@ def route_intent(user_text: str) -> IntentType:
         return "device_control"
 
     # 环境感知触发（如"太热了"、"很黑"）
-    # 注意：has_env 和 has_room 在函数开头统一计算
-    has_env = any(re.search(p, text) for p in _ENV_KEYWORDS)
     has_room = any(kw in text for kw in _ROOM_KEYWORDS)
 
     # 环境词 + 房间名 → 高置信度设备控制（如"客厅有点热"）
@@ -190,8 +251,6 @@ def route_intent(user_text: str) -> IntentType:
         return "device_control"
 
     # ---- 默认降级：非疑问句一律走设备控制，疑问句才走知识问答 ----
-    # （避免 confidence=0.2 时把"风力1档"这类肯定句误判成知识问答，
-    #   进入 device_control 后 NLU 会自动继承 last_device）
     if not has_question:
         return "device_control"
     return "knowledge_qa"
@@ -213,6 +272,13 @@ def route_intent_with_confidence(user_text: str) -> dict:
 
     text = user_text.strip()
 
+    # 与 route_intent 完全一致的信号抽取
+    has_delta = any(kw in text for kw in _DELTA_ACTION_KEYWORDS)
+    has_delta_attr = any(kw in text for kw in _DELTA_ATTRIBUTE_KEYWORDS)
+    bound_type_list = [t for kw, t in _ATTR_DEVICE_TYPE_BINDING.items() if kw in text]
+    has_attr_binding = len(bound_type_list) > 0
+    has_question = any(re.search(p, text) for p in _QUESTION_PATTERNS)
+
     signals = {
         "has_device": any(kw in text for kw in _DEVICE_KEYWORDS),
         "has_action": any(kw in text for kw in _ACTION_KEYWORDS),
@@ -220,10 +286,15 @@ def route_intent_with_confidence(user_text: str) -> dict:
         "has_value": any(re.search(p, text) for p in _VALUE_KEYWORDS),
         "has_env": any(re.search(p, text) for p in _ENV_KEYWORDS),
         "has_room": any(kw in text for kw in _ROOM_KEYWORDS),
-        "has_question": any(re.search(p, text) for p in _QUESTION_PATTERNS),
+        "has_question": has_question,
         "has_knowledge_domain": any(kw in text for kw in _KNOWLEDGE_DOMAIN_KEYWORDS),
         "has_weather": any(kw in text for kw in _WEATHER_KEYWORDS),
         "has_ac_attr": any(kw in text for kw in _AC_ATTRIBUTE_KEYWORDS),
+        # 新增：增量/相对控制 信号
+        "has_delta": has_delta,
+        "has_delta_attr": has_delta_attr,
+        "has_attr_binding": has_attr_binding,
+        "bound_device_types": list(set(bound_type_list)),
     }
 
     intent = route_intent(text)

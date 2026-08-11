@@ -209,9 +209,94 @@ async def apply_mqtt_state_update(device_id: str, new_state: Dict[str, Any]) -> 
 
 async def _execute_ac(state: Dict[str, Any], display: str, action: str,
                       value: Any, value_type: str, attrs: Dict[str, Any],
-                      dev_id: str) -> Dict[str, Any]:
-    """空调多属性控制：一次指令可同时设置温度、模式、扫风、风力"""
+                      dev_id: str,
+                      control_mode: str = "absolute",
+                      delta: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """空调多属性控制：支持【绝对量设置】和【增量调节（调高/调小）】两种模式。
+
+    - absolute 模式：行为不变（打开/关闭/设置温度、模式、扫风、风力）
+    - delta 模式：优先处理，读取当前值 → 加 delta → clamp 边界 → 写状态 → 生成形如
+                  "已将卧室空调温度调高 2 度，当前为 27 度" 的回复。
+    """
     changes: List[str] = []
+
+    # ==================== 💥 增量控制（最高优先级） ====================
+    if control_mode == "delta" and delta and isinstance(delta, dict):
+        attr_field = delta.get("attr_field")
+        attr_cn = delta.get("attr_cn") or attr_field
+        delta_value = int(delta.get("delta_value", 0))
+        if delta_value == 0:
+            return {
+                "success": False, "code": 400,
+                "message": f"增量值为 0，未对{display}做任何调整",
+                "resolved_device_id": dev_id, "state_snapshot": state.copy(),
+            }
+
+        # 先保证空调是开的（增量调节说明用户在使用，不开没意义）
+        power_was_off = (state.get("power") != "on")
+        if power_was_off:
+            state["power"] = "on"
+            state["mode"] = state.get("mode") or "cooling"
+
+        # ---- 根据属性字段做增量 ----
+        if attr_field == "temperature":
+            lo, hi = 16, 30
+            current = int(state.get("temperature", 26))
+            raw_new = current + delta_value
+            new_val = max(lo, min(hi, raw_new))
+            actual_delta = new_val - current
+            state["temperature"] = new_val
+            # 生成回复文本
+            if actual_delta > 0:
+                changes.append(f"温度{('调高 ' + str(actual_delta) + ' 度') if actual_delta != 1 else '调高 1 度'}")
+            elif actual_delta < 0:
+                changes.append(f"温度{('调低 ' + str(abs(actual_delta)) + ' 度') if actual_delta != -1 else '调低 1 度'}")
+            else:
+                changes.append(f"温度已达{'最高' if delta_value > 0 else '最低'}值（{new_val} 度），无法继续{'调高' if delta_value > 0 else '调低'}")
+            changes.append(f"当前为 {new_val} 度")
+            # 把 value/value_type 补上，方便后续调试看
+            value = new_val
+            value_type = "temperature"
+
+        elif attr_field == "fan_speed":
+            lo, hi = 1, 5
+            current_raw = state.get("fan_speed", 2)
+            # fan_speed 可能是 "quiet"/"auto" 这种非数字值 → 取基础档位 2（或 quiet→1, auto→2）
+            fan_equiv = {"quiet": 1, "auto": 2}
+            base = current_raw if isinstance(current_raw, int) else fan_equiv.get(str(current_raw).lower(), 2)
+            raw_new = base + delta_value
+            new_val = max(lo, min(hi, raw_new))
+            actual_delta = new_val - base
+            state["fan_speed"] = new_val
+            fan_cn_new = AC_FAN_NAMES.get(new_val, f"{new_val}档")
+            if actual_delta > 0:
+                changes.append(f"风力{('调大 ' + str(actual_delta) + ' 档') if actual_delta != 1 else '调大 1 档'}")
+            elif actual_delta < 0:
+                changes.append(f"风力{('调小 ' + str(abs(actual_delta)) + ' 档') if actual_delta != -1 else '调小 1 档'}")
+            else:
+                changes.append(f"风力已达{'最高' if delta_value > 0 else '最低'}档（{fan_cn_new}），无法继续{'调大' if delta_value > 0 else '调小'}")
+            changes.append(f"当前为{fan_cn_new}")
+
+        else:
+            return {
+                "success": False, "code": 400,
+                "message": f"暂不支持对{display}的{attr_cn}做增量调节",
+                "resolved_device_id": dev_id, "state_snapshot": state.copy(),
+            }
+
+        # 拼接最终消息
+        if power_was_off:
+            prefix = f"已为您开启{display}"
+            if changes:
+                prefix += "，" + "，".join(changes)
+        else:
+            prefix = f"已将{display}" + "，".join(changes)
+        return {
+            "success": True, "code": 200,
+            "message": prefix,
+            "resolved_device_id": dev_id,
+            "state_snapshot": state.copy(),
+        }
 
     # 语义触发的模式指令：cool/heat 等同于 on + 设置模式
     if action in ("cool", "heat", "auto", "fan", "dry"):
@@ -413,8 +498,19 @@ async def _execute_ac(state: Dict[str, Any], display: str, action: str,
 
 
 async def _execute_tv(state: Dict[str, Any], display: str, action: str,
-                      attrs: Dict[str, Any], dev_id: str) -> Dict[str, Any]:
-    """电视控制：开关"""
+                      attrs: Dict[str, Any], dev_id: str,
+                      control_mode: str = "absolute",
+                      delta: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """电视控制：开关。delta 模式下先转绝对量处理（暂未实现音量/频道增量，回退为通用提示）"""
+    # 对 TV 的增量控制暂时不支持（DEVICE_STATES 里没有 volume 字段），给出清晰提示
+    if control_mode == "delta" and delta:
+        attr_cn = delta.get("attr_cn") or "参数"
+        return {
+            "success": False, "code": 400,
+            "message": f"抱歉，暂不支持对{display}的{attr_cn}做增量调节",
+            "resolved_device_id": dev_id,
+            "state_snapshot": state.copy(),
+        }
     if action == "on":
         if state.get("power") == "on":
             return {
@@ -561,7 +657,12 @@ async def _execute_command_impl(intent: Dict[str, Any]) -> Dict[str, Any]:
             "device_name": str,
             "action": str,
             "value": Any,
-            "value_type": str
+            "value_type": str,
+            "control_mode": "absolute" | "delta",  # 新增
+            "delta": None | {                        # 新增
+                "attr_field": str, "attr_cn": str,
+                "delta_value": int, "bound_type": str, "is_qualitative": bool
+            },
         }
 
     Returns:
@@ -579,6 +680,8 @@ async def _execute_command_impl(intent: Dict[str, Any]) -> Dict[str, Any]:
     value = intent.get("value")
     value_type = intent.get("value_type")
     attrs = intent.get("attrs") or {}
+    control_mode = intent.get("control_mode", "absolute")
+    delta = intent.get("delta")
 
     # ---- 多设备扩展：curtain.all / light.all 等泛指目标 ----
     if dev_id.endswith(".all"):
@@ -599,6 +702,8 @@ async def _execute_command_impl(intent: Dict[str, Any]) -> Dict[str, Any]:
                 "value": value,
                 "value_type": value_type,
                 "attrs": attrs,
+                "control_mode": control_mode,
+                "delta": delta,
             }
             sub_result = await _execute_command_impl(sub_intent)
             results.append(sub_result)
@@ -639,11 +744,13 @@ async def _execute_command_impl(intent: Dict[str, Any]) -> Dict[str, Any]:
 
         # ============ 空调多属性控制 ============
         if dev_type == "ac":
-            return await _execute_ac(state, display, action, value, value_type, attrs, dev_id)
+            return await _execute_ac(state, display, action, value, value_type, attrs, dev_id,
+                                     control_mode=control_mode, delta=delta)
 
         # ============ 电视多属性控制 ============
         if dev_type == "tv":
-            return await _execute_tv(state, display, action, attrs, dev_id)
+            return await _execute_tv(state, display, action, attrs, dev_id,
+                                     control_mode=control_mode, delta=delta)
 
         # 灯光开关
         if dev_type == "light":
