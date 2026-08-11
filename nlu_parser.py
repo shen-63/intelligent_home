@@ -215,6 +215,17 @@ _ALL_DEVICE_TYPE_MAP: List[Tuple[str, str, str]] = [
     (r"(?:全屋|全部)(?:灯)", "light.all", "所有灯"),
 ]
 
+# 设备类型 → .all 泛化ID 映射（用于前缀"所有"泛化传播）
+_DEVICE_TYPE_TO_ALL: Dict[str, str] = {
+    "curtain": "curtain.all",
+    "light": "light.all",
+    "ac": "ac.all",
+    "tv": "tv.all",
+}
+
+# 通用泛化量词（前缀中出现时，后续所有设备都泛化）
+_ALL_PREFIX_PATTERN = re.compile(r"(?:所有|全部|一切|全屋|统统)")
+
 
 def _detect_all_device_refs(text: str) -> List[Tuple[int, int, str, str]]:
     """检测文本中的多设备泛化引用，返回 [(start, end, device_id, raw_name), ...]"""
@@ -399,6 +410,21 @@ def parse_multi_intent(text: str, session_id: str = "") -> List[Dict[str, Any]]:
 
     # 按位置排序
     device_positions.sort(key=lambda x: x[0])
+
+    # 前缀泛化传播：如果文本包含"所有/全部/全屋"等量词，
+    # 且存在多个设备，将非泛化的通用设备ID（如 tv, curtain）也泛化到 .all
+    # 注意：不处理具体房间设备（如 living_room_tv），避免过度泛化
+    if len(device_positions) > 1:
+        if _ALL_PREFIX_PATTERN.search(text):
+            propagated: List[Tuple[int, int, str, str]] = []
+            for pos, end, dev_id, raw_name in device_positions:
+                if not dev_id.endswith(".all"):
+                    if dev_id in _DEVICE_TYPE_TO_ALL:
+                        all_id = _DEVICE_TYPE_TO_ALL[dev_id]
+                        propagated.append((pos, end, all_id, f"所有{raw_name}"))
+                        continue
+                propagated.append((pos, end, dev_id, raw_name))
+            device_positions = propagated
 
     if len(device_positions) == 1:
         pos, end_pos, dev_id, raw_name = device_positions[0]

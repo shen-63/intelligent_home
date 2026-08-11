@@ -584,19 +584,17 @@ async def _execute_command_impl(intent: Dict[str, Any]) -> Dict[str, Any]:
     if dev_id.endswith(".all"):
         short_type = dev_id[:-4]  # curtain.all -> curtain
         type_labels = {"curtain": "窗帘", "light": "灯", "ac": "空调", "tv": "电视"}
+        verb_on = {"curtain": "拉开", "light": "打开", "ac": "开启", "tv": "开启"}
+        verb_off = {"curtain": "关闭", "light": "关闭", "ac": "关闭", "tv": "关闭"}
+        verb_set = {"curtain": "设置", "light": "设置", "ac": "设置", "tv": "设置"}
         type_label = type_labels.get(short_type, short_type)
         results = []
-        messages = []
-        seen_msgs = set()
         async with state_lock:
             targets = [k for k, v in DEVICE_STATES.items() if v["type"] == short_type]
         for target_id in targets:
-            async with state_lock:
-                room = DEVICE_STATES[target_id].get("room", "")
-            room_label = f"{room}{type_label}" if room else type_label
             sub_intent = {
                 "device_id": target_id,
-                "device_name": room_label,
+                "device_name": type_label,
                 "action": action,
                 "value": value,
                 "value_type": value_type,
@@ -604,15 +602,23 @@ async def _execute_command_impl(intent: Dict[str, Any]) -> Dict[str, Any]:
             }
             sub_result = await _execute_command_impl(sub_intent)
             results.append(sub_result)
-            msg = sub_result.get("message", "")
-            if msg and msg not in seen_msgs:
-                seen_msgs.add(msg)
-                messages.append(msg)
         all_ok = all(r.get("success", False) for r in results)
+
+        # 生成简洁的汇总消息
+        if action == "on":
+            verb = verb_on.get(short_type, "打开")
+            message = f"已为您打开所有{type_label}"
+        elif action == "off":
+            verb = verb_off.get(short_type, "关闭")
+            message = f"已为您关闭所有{type_label}"
+        else:
+            verb = verb_set.get(short_type, "设置")
+            message = f"已为您{verb}所有{type_label}"
+
         return {
             "success": all_ok,
             "code": 200 if all_ok else 207,
-            "message": "，".join(messages) if messages else f"已处理所有{short_type}设备",
+            "message": message,
             "resolved_device_id": dev_id,
             "state_snapshot": {},
         }

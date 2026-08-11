@@ -455,6 +455,16 @@ def _merge_messages(messages: list) -> str:
     if len(messages) == 1:
         return messages[0]
 
+    # 特殊优化：多条"已为您打开所有X" → "已为您打开所有X和Y"
+    all_pattern = re.compile(r"^已为您(打开|关闭|开启|设置)所有(.+)$")
+    all_matches = [all_pattern.match(m) for m in messages]
+    if all(all_matches):
+        verbs = set(m.group(1) for m in all_matches)
+        if len(verbs) == 1:
+            verb = all_matches[0].group(1)
+            objects = [m.group(2) for m in all_matches]
+            return f"已为您{verb}了所有{'和'.join(objects)}"
+
     # 尝试提取公共前缀 "已为您"
     prefixes = []
     for msg in messages:
