@@ -177,8 +177,15 @@ async def _handle_device_control(text: str, session_id: str) -> Dict[str, Any]:
             err_msg = result.get("message", "执行失败")
             messages.append(err_msg)
 
-    # 4. 拼接回复
-    reply_text = "，".join(messages) if messages else "指令已执行"
+    # 4. 拼接回复：优先用 main.py 的 _merge_messages 进行多意图合并
+    if not messages:
+        reply_text = "指令已执行"
+    else:
+        try:
+            from main import _merge_messages
+            reply_text = _merge_messages(messages)
+        except Exception:
+            reply_text = "，".join(messages)
 
     return {
         "success": all(r.get("success", False) for r in results) if results else False,
@@ -234,7 +241,7 @@ async def _handle_knowledge_qa(text: str, session_id: str) -> Dict[str, Any]:
     rag_sources = []
     try:
         from rag_service import search_knowledge
-        results = search_knowledge(text, top_k=2)
+        results = search_knowledge(text, top_k=4)
         if results:
             rag_context = "\n\n".join([r["content"] for r in results])
             rag_sources = [r.get("source", "") for r in results]
@@ -251,14 +258,15 @@ async def _handle_knowledge_qa(text: str, session_id: str) -> Dict[str, Any]:
         system_prompt = f"""你是一个简洁的智能家居问答助手。
 
 【你的任务】
-根据提供的参考资料回答用户的问题。
+根据提供的参考资料回答用户的问题，必须覆盖参考资料中的所有不同要点，不要只挑第一条。
 
 【严格回答规则】
 1. 用自己的话总结，绝对不要逐字复述参考资料中的任何字符或代码
-2. 回答不超过 100 个中文字符
+2. 回答控制在 1~2 句、150 字以内，优先列出最常见的 3~4 个原因
 3. 引用故障码时，直接说中文含义（如"通信故障"），不要复述代码原文
 4. 保持语言自然流畅，不要出现任何单个字符的连续重复
 5. 如果参考资料没有相关信息，请说"抱歉，我暂时无法回答这个问题"
+6. 多要点时用分号或顿号连起来，尽量一句话说完
 
 【参考资料（仅供理解，不要复述）】
 {processed_rag}
@@ -466,11 +474,25 @@ async def process_with_scene(text: str, session_id: str = "default") -> Dict[str
         if scene:
             print(f"[SmartBrain] 场景检测命中: {scene['description']}")
             scene_result = await execute_scene(scene)
-            if scene_result.get("success") and scene_result.get("has_new_changes"):
-                scene_msg = scene_result.get("message", "")
-                if scene_msg:
-                    # 拼接场景执行结果
+            scene_msg = scene_result.get("message", "")
+            has_new = scene_result.get("has_new_changes", False)
+            if scene_result.get("success") and scene_msg:
+                # 情况A：原设备控制流程实际没有执行任何指令（如"我要睡觉了"→规则NLU未命中），
+                #       此时直接用场景回复覆盖原来的"抱歉未理解"提示
+                fallback_phrases = ["抱歉，我没有理解", "抱歉，无法识别", "可以再说一遍吗"]
+                origin_fallback = any(p in result.get("reply", "") for p in fallback_phrases)
+                if origin_fallback or not result.get("device_executed", False):
+                    result["reply"] = scene_msg
+                else:
+                    # 情况B：原指令已执行 + 场景还有额外动作 → 拼接
                     clean_reply = result["reply"].rstrip("。！？.!?")
                     result["reply"] = f"{clean_reply}，同时{scene_msg}"
+                result["success"] = True
+                result["device_executed"] = result["device_executed"] or has_new
+            elif not result.get("success", True) and not result.get("device_executed", False):
+                # 场景也没产出消息，且原来的回复是兜底错误 → 改成更友好的场景消息
+                if scene_msg:
+                    result["reply"] = scene_msg
+                    result["success"] = True
 
     return result

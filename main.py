@@ -1041,30 +1041,62 @@ def _normalize_device_states_snapshot() -> Dict[str, Dict[str, Any]]:
 async def _execute_single_command(
     entity_id: str, action: str, hvac_mode: str = "", value: Any = None, fan_mode: str = "", swing_mode: str = "",
 ) -> Dict[str, Any]:
-    """执行单条设备控制命令，返回结果字典（包装 MQTT 发布）
+    """执行单条设备控制命令，返回结果字典
 
-    1) 执行内部实现 _execute_single_command_impl（修改 DEVICE_STATES）
-    2) diff DEVICE_STATES 前后变化，对每个变化的设备调用 MQTT publish
+    直接复用 device_controller.execute_command，保证 MQTT 发布与设备状态更新一致。
+    自动补全 device_name（基于 entity_id 推导中文显示名）。
     """
-    import copy as _copy
-    # 1) 保存每个设备的状态快照（只读 deepcopy，用于事后 diff）
-    async with state_lock:
-        before_snap = {k: _copy.deepcopy(v) for k, v in DEVICE_STATES.items()}
+    from device_controller import execute_command, DEVICE_STATES, DEVICE_TYPE_NAMES
 
-    # 2) 执行内部实现
-    result = await _execute_single_command_impl(entity_id, action, hvac_mode=hvac_mode, value=value, fan_mode=fan_mode, swing_mode=swing_mode)
+    def _resolve_display_name(eid: str) -> str:
+        # .all 批量：curtain.all -> 窗帘
+        if eid.endswith(".all"):
+            short_type = eid[:-4]
+            return DEVICE_TYPE_NAMES.get(short_type, short_type)
+        # 精确设备：bedroom_ac -> 卧室空调
+        if eid in DEVICE_STATES:
+            info = DEVICE_STATES[eid]
+            room = info.get("room", "")
+            t = info.get("type", "")
+            if room and t:
+                return f"{room}{DEVICE_TYPE_NAMES.get(t, t)}"
+            return info.get("name", eid)
+        # 通用别名兜底：air_conditioner / tv / light / curtain
+        alias_map = {"air_conditioner": "空调", "ac": "空调", "tv": "电视", "light": "灯", "curtain": "窗帘"}
+        return alias_map.get(eid, eid)
 
-    # 3) 如果命令执行成功，发布 MQTT（仅针对 actually changed 的设备）
-    if result.get("success", False):
-        await _publish_changed_devices_mqtt(
-            before_snap,
-            action_raw=action,
-            hvac_mode=hvac_mode,
-            value=value,
-            fan_mode=fan_mode,
-            swing_mode=swing_mode,
-        )
-    return result
+    intent = {
+        "device_id": entity_id,
+        "device_name": _resolve_display_name(entity_id),
+        "action": action,
+        "value": value,
+        "hvac_mode": hvac_mode,
+        "fan_mode": fan_mode,
+        "swing_mode": swing_mode,
+        "attrs": {
+            "hvac_mode": hvac_mode,
+            "fan_mode": fan_mode,
+            "swing_mode": swing_mode,
+            "temperature": value,
+        },
+    }
+    # 动作标准化：场景配置常用 turn_on/turn_off，统一为 on/off/set
+    alias_map = {
+        "turn_on": "on", "on": "on", "open": "on",
+        "turn_off": "off", "off": "off", "close": "off",
+        "toggle": "toggle",
+        "set_fan_mode": "set", "set_hvac_mode": "set", "set_swing_mode": "set",
+        "set_temperature": "set", "set_value": "set", "set_ac": "set", "set": "set",
+        "adjust": "set", "adjust_ac": "set",
+    }
+    intent["action"] = alias_map.get(intent["action"], intent["action"])
+    # 清洗 attrs：移除空字符串，避免空调逻辑把空值当成"有属性变更"
+    clean_attrs = {k: v for k, v in (intent.get("attrs") or {}).items() if v not in (None, "", [])}
+    intent["attrs"] = clean_attrs
+    # 仅当存在温度时标记 value_type=temperature，让空调逻辑走温度设置分支
+    if value is not None:
+        intent["value_type"] = "temperature"
+    return await execute_command(intent)
 async def _execute_single_command_impl(entity_id: str, action: str, hvac_mode: str = "", value: Any = None, fan_mode: str = "", swing_mode: str = "") -> Dict[str, Any]:
     """[内部实现] 执行单条设备控制命令，返回结果字典
 

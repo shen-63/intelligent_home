@@ -127,19 +127,67 @@ def _get_embeddings_batch(texts: List[str]) -> Optional[List[List[float]]]:
 
 def _chunk_text(text: str, source: str = "") -> List[Dict[str, str]]:
     """
-    将文本按段落切分为 Chunk。
+    将 Markdown 文本按段落切分为 Chunk，并保留 Markdown 标题层级上下文。
 
     策略：
-    1. 先按双换行符切分段落
-    2. 超长段落按 CHUNK_SIZE 二次切分，保留 CHUNK_OVERLAP 重叠
-    3. 每个 Chunk 保留 source 信息
+    1. 解析每个 Markdown 行的标题级别（# / ## / ### / ####）维护当前标题栈
+    2. 按双换行符切分段落，对每个正文段落：
+       - 拼接当前所在的所有父级标题（作为主题上下文）
+       - 跳过纯标题-only 的孤立块（避免无实质内容的高相似度噪声）
+    3. 超长段落按 CHUNK_SIZE 二次切分，保留 CHUNK_OVERLAP 重叠
+    4. 每个 Chunk 保留 source 信息
     """
-    chunks = []
-    # 按空行切分段落
-    paragraphs = re.split(r'\n\s*\n', text.strip())
+    # 先按行遍历，构造 (heading_stack, paragraph) 对
+    heading_re = re.compile(r'^(#{1,6})\s+(.+)$')
+    heading_stack: List[Tuple[int, str]] = []  # [(level, text), ...]
 
+    def _heading_context() -> str:
+        return " / ".join(txt for _, txt in heading_stack) if heading_stack else ""
+
+    # 按空行切分段落（保留原始顺序）
+    raw_paragraphs = re.split(r'\n\s*\n', text.strip())
+
+    enriched_blocks: List[str] = []
+
+    for raw in raw_paragraphs:
+        raw = raw.strip()
+        if not raw:
+            continue
+        lines = raw.splitlines()
+        # 判断整块是否为"纯标题组合"（每行都是 heading），如果是就只更新栈不入块
+        all_headings = all(heading_re.match(l.strip()) for l in lines if l.strip())
+        headings_in_block: List[Tuple[int, str]] = []
+        other_lines: List[str] = []
+        for l in lines:
+            m = heading_re.match(l.strip())
+            if m:
+                level = len(m.group(1))
+                title = m.group(2).strip()
+                headings_in_block.append((level, title))
+            else:
+                other_lines.append(l.strip())
+        # 更新 heading_stack：弹出同级或更深级
+        for lv, _ in headings_in_block:
+            while heading_stack and heading_stack[-1][0] >= lv:
+                heading_stack.pop()
+        for lv, title in headings_in_block:
+            heading_stack.append((lv, title))
+        # 正文部分：有非标题行（且非空）才入块
+        body = "\n".join(x for x in other_lines if x).strip()
+        if not body or len(body) < 10:
+            continue  # 跳过纯标题块 / 过短块
+        context = _heading_context()
+        if context:
+            # 拼接标题上下文，格式：[标题: A / B / C] + 正文
+            block = f"[{context}]\n{body}"
+        else:
+            block = body
+        enriched_blocks.append(block)
+
+    chunks = []
     chunk_id = 0
-    for para in paragraphs:
+
+    for para in enriched_blocks:
         para = para.strip()
         if not para or len(para) < 10:
             continue
@@ -207,7 +255,8 @@ def init_knowledge_base(knowledge_dir: str = "") -> int:
         print("[RAG] 未找到知识文件，请在 data/knowledge/ 目录放入 .md 文件")
         return 0
 
-    # 清空旧数据
+    # 清空旧数据（同时重置全局 _collection 句柄，防止句柄指向已被删除的旧 collection）
+    global _collection
     try:
         client.delete_collection(COLLECTION_NAME)
     except Exception:
