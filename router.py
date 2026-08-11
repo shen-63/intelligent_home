@@ -30,7 +30,7 @@ _ACTION_KEYWORDS = [
     "调到", "调至", "设为", "设置", "调节", "调整", "切换",
     "拉开", "拉上", "开", "灭", "亮",
     "调高", "调低", "升高", "降低", "加大", "减小", "增强", "减弱",
-    "扫风", "摆风",
+    "扫风", "摆风", "风力", "风速", "风档",
 ]
 
 # 数值关键词（温度、档位等，通常伴随设备控制）
@@ -39,6 +39,13 @@ _VALUE_KEYWORDS = [
     "最亮", "最暗", "全开", "全关", "静音",
     "制冷", "制热", "除湿", "送风", "自动模式",
     "上下扫风", "左右扫风", "一档", "二档", "三档", "四档", "五档",
+]
+
+# 空调/灯属性专属关键词（"风力1档"、"制冷"、"扫风"等无设备名但肯定是设备控制）
+_AC_ATTRIBUTE_KEYWORDS = [
+    "风力", "风速", "风档", "档位",
+    "制冷", "制热", "除湿", "送风", "模式",
+    "扫风", "摆风", "风向",
 ]
 
 # 环境感知词（"很热"、"太暗"等隐式触发设备控制）
@@ -113,6 +120,9 @@ def route_intent(user_text: str) -> IntentType:
     has_scene = any(kw in text for kw in _SCENE_KEYWORDS)
     has_value = any(re.search(p, text) for p in _VALUE_KEYWORDS)
     has_env = any(re.search(p, text) for p in _ENV_KEYWORDS)
+    has_ac_attr = any(kw in text for kw in _AC_ATTRIBUTE_KEYWORDS)
+    # 空调属性+档位 也视为"有值"，如"风力低档"、"静音模式"
+    has_value = has_value or has_ac_attr and (re.search(r'[低中高大小一二三12345]{1,2}档', text) or "静音" in text or "模式" in text)
 
     # ---- 检测知识问答信号 ----
     has_question = any(re.search(p, text) for p in _QUESTION_PATTERNS)
@@ -157,6 +167,14 @@ def route_intent(user_text: str) -> IntentType:
     if has_action and has_value:
         return "device_control"
 
+    # 有空调属性关键词（如"风力1档"、"制冷模式"、"左右扫风"）→ 设备控制
+    if has_ac_attr and not has_question:
+        return "device_control"
+
+    # 有数值（数字/档位）且不是疑问句 → 设备控制（等待上下文继承设备名）
+    if has_value and not has_question:
+        return "device_control"
+
     # ---- 检测知识问答信号（补充检测）----
     # 明确的疑问句 → 知识问答
     if has_question and not has_action:
@@ -171,7 +189,11 @@ def route_intent(user_text: str) -> IntentType:
     if has_action and not has_question:
         return "device_control"
 
-    # ---- 默认降级：无法明确判断时走知识问答 ----
+    # ---- 默认降级：非疑问句一律走设备控制，疑问句才走知识问答 ----
+    # （避免 confidence=0.2 时把"风力1档"这类肯定句误判成知识问答，
+    #   进入 device_control 后 NLU 会自动继承 last_device）
+    if not has_question:
+        return "device_control"
     return "knowledge_qa"
 
 
@@ -201,6 +223,7 @@ def route_intent_with_confidence(user_text: str) -> dict:
         "has_question": any(re.search(p, text) for p in _QUESTION_PATTERNS),
         "has_knowledge_domain": any(kw in text for kw in _KNOWLEDGE_DOMAIN_KEYWORDS),
         "has_weather": any(kw in text for kw in _WEATHER_KEYWORDS),
+        "has_ac_attr": any(kw in text for kw in _AC_ATTRIBUTE_KEYWORDS),
     }
 
     intent = route_intent(text)
@@ -216,6 +239,8 @@ def route_intent_with_confidence(user_text: str) -> dict:
             score += 0.4
         if signals["has_value"]:
             score += 0.2
+        if signals["has_ac_attr"]:
+            score += 0.35  # 空调属性是强设备控制信号
         if signals["has_env"] and signals["has_room"]:
             score += 0.8  # 环境词+房间名 → 高置信度
         elif signals["has_env"]:

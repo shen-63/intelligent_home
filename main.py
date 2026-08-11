@@ -745,6 +745,7 @@ ALL_TARGETS_MAP = {
 SCENE_PRESETS: Dict[str, Dict[str, Any]] = {
     "sleep": {
         "keywords": ["睡觉", "晚安", "睡眠", "睡了", "休息", "要睡", "入眠"],
+        "reply": "晚安，已为您切换到睡眠模式",
         "actions": [
             {"entity_id": "light.all", "action": "turn_off"},
             {"entity_id": "tv.all", "action": "turn_off"},
@@ -763,6 +764,7 @@ SCENE_PRESETS: Dict[str, Dict[str, Any]] = {
     },
     "away": {
         "keywords": ["出门", "离家", "外出", "上班", "离开", "全关", "全部关闭"],
+        "reply": "注意安全，已为您切换到离家模式",
         "actions": [
             {"entity_id": "light.all", "action": "turn_off"},
             {"entity_id": "tv.all", "action": "turn_off"},
@@ -773,6 +775,7 @@ SCENE_PRESETS: Dict[str, Dict[str, Any]] = {
     },
     "movie": {
         "keywords": ["看电影", "电影模式", "观影"],
+        "reply": "已为您切换到观影模式，祝您观影愉快",
         "actions": [
             {"entity_id": "light.all", "action": "turn_off"},
             {"entity_id": "curtain.all", "action": "turn_off"},
@@ -799,6 +802,7 @@ def detect_scene_from_text(text: str) -> Optional[Dict[str, Any]]:
                 return {
                     "scene_key": scene_key,
                     "description": scene_cfg.get("description", scene_key),
+                    "reply": scene_cfg.get("reply", ""),
                     "actions": scene_cfg.get("actions", []),
                 }
     return None
@@ -871,11 +875,16 @@ async def execute_scene(scene: Dict[str, Any]) -> Dict[str, Any]:
 
     all_ok = all(r.get("success", False) for r in results) if results else True
 
-    # 只保留实际执行的消息，过滤"已是目标状态"的提示
-    combined_msg = ""
-    if executed_messages:
-        combined_msg = f"已为您执行{scene_desc}"
-        combined_msg += "：" + "，".join(executed_messages)
+    # 优先采用场景预设的简洁回复，避免把子操作逐条列出导致啰嗦
+    combined_msg = scene.get("reply", "").strip()
+    has_new_changes = len(executed_messages) > 0
+    if not combined_msg:
+        # 兜底：如果没有预设 reply，才拼接动态消息
+        if executed_messages:
+            combined_msg = f"已为您执行{scene_desc}"
+            combined_msg += "：" + "，".join(executed_messages)
+        elif skipped_count > 0:
+            combined_msg = f"已为您切换到{scene_desc}"
 
     return {
         "success": all_ok,
@@ -885,7 +894,7 @@ async def execute_scene(scene: Dict[str, Any]) -> Dict[str, Any]:
         "executed_count": len(results),
         "skipped_count": skipped_count,
         "already_count": already_count,
-        "has_new_changes": len(executed_messages) > 0,
+        "has_new_changes": has_new_changes or bool(scene.get("reply")),
         "results": results,
     }
 
