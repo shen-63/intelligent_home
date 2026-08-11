@@ -16,6 +16,8 @@ Embedding 方案：
 import os
 import re
 import json
+import time
+import random
 from typing import List, Dict, Any, Optional
 
 import httpx
@@ -58,7 +60,7 @@ def _get_chroma_client():
 
 
 def _get_embedding(text: str) -> Optional[List[float]]:
-    """调用 SiliconFlow Embedding API 获取文本向量"""
+    """调用 SiliconFlow Embedding API 获取文本向量（带重试）"""
     if not SILICONFLOW_API_KEY:
         print("[RAG] SILICONFLOW_API_KEY 未配置")
         return None
@@ -73,18 +75,25 @@ def _get_embedding(text: str) -> Optional[List[float]]:
         "input": text,
     }
 
-    try:
-        resp = httpx.post(url, headers=headers, json=payload, timeout=30)
-        resp.raise_for_status()
-        data = resp.json()
-        return data["data"][0]["embedding"]
-    except Exception as e:
-        print(f"[RAG] Embedding 调用失败: {e}")
-        return None
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            resp = httpx.post(url, headers=headers, json=payload, timeout=30, follow_redirects=True)
+            resp.raise_for_status()
+            data = resp.json()
+            return data["data"][0]["embedding"]
+        except Exception as e:
+            if attempt < max_retries - 1:
+                wait = (attempt + 1) * 1.0 + random.random()
+                time.sleep(wait)
+            else:
+                print(f"[RAG] Embedding 调用失败 (重试{max_retries}次): {e}")
+                return None
+    return None
 
 
 def _get_embeddings_batch(texts: List[str]) -> Optional[List[List[float]]]:
-    """批量获取文本向量"""
+    """批量获取文本向量（带重试）"""
     if not SILICONFLOW_API_KEY:
         return None
 
@@ -98,16 +107,22 @@ def _get_embeddings_batch(texts: List[str]) -> Optional[List[List[float]]]:
         "input": texts,
     }
 
-    try:
-        resp = httpx.post(url, headers=headers, json=payload, timeout=60)
-        resp.raise_for_status()
-        data = resp.json()
-        # 按 index 排序确保顺序正确
-        sorted_data = sorted(data["data"], key=lambda x: x["index"])
-        return [item["embedding"] for item in sorted_data]
-    except Exception as e:
-        print(f"[RAG] 批量 Embedding 调用失败: {e}")
-        return None
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            resp = httpx.post(url, headers=headers, json=payload, timeout=60, follow_redirects=True)
+            resp.raise_for_status()
+            data = resp.json()
+            sorted_data = sorted(data["data"], key=lambda x: x["index"])
+            return [item["embedding"] for item in sorted_data]
+        except Exception as e:
+            if attempt < max_retries - 1:
+                wait = (attempt + 1) * 1.0 + random.random()
+                time.sleep(wait)
+            else:
+                print(f"[RAG] 批量 Embedding 调用失败 (重试{max_retries}次): {e}")
+                return None
+    return None
 
 
 def _chunk_text(text: str, source: str = "") -> List[Dict[str, str]]:
@@ -231,9 +246,52 @@ def init_knowledge_base(knowledge_dir: str = "") -> int:
     return len(all_chunks)
 
 
+def _search_tfidf_fallback(query: str, top_k: int = 2) -> List[Dict[str, Any]]:
+    """本地 TF-IDF 降级检索（远程 Embedding 不可用时使用）"""
+    try:
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.metrics.pairwise import cosine_similarity
+    except ImportError:
+        return []
+
+    if not _get_chroma_client():
+        return []
+
+    try:
+        all_data = _collection.get()
+        if not all_data or not all_data.get("documents"):
+            return []
+
+        documents = all_data["documents"]
+        metadatas = all_data.get("metadatas", [{}] * len(documents))
+
+        corpus = [query] + documents
+        vectorizer = TfidfVectorizer(max_features=512)
+        tfidf_matrix = vectorizer.fit_transform(corpus)
+
+        query_vec = tfidf_matrix[0:1]
+        doc_vecs = tfidf_matrix[1:]
+        similarities = cosine_similarity(query_vec, doc_vecs).flatten()
+
+        top_indices = similarities.argsort()[-top_k:][::-1]
+        results = []
+        for idx in top_indices:
+            if similarities[idx] > 0.1:
+                results.append({
+                    "content": documents[idx],
+                    "source": metadatas[idx].get("source", "") if metadatas[idx] else "",
+                    "distance": float(1.0 - similarities[idx]),
+                })
+        return results
+    except Exception as e:
+        print(f"[RAG] TF-IDF 降级检索失败: {e}")
+        return []
+
+
 def search_knowledge(query: str, top_k: int = 2) -> List[Dict[str, Any]]:
     """
     从知识库检索与查询最相关的 Top-K 段落。
+    优先使用 Embedding API，失败时降级为 TF-IDF。
 
     Args:
         query: 用户查询文本
@@ -247,7 +305,9 @@ def search_knowledge(query: str, top_k: int = 2) -> List[Dict[str, Any]]:
 
     query_embedding = _get_embedding(query)
     if not query_embedding:
-        return []
+        # Embedding 失败，降级为 TF-IDF
+        print("[RAG] 使用 TF-IDF 降级检索")
+        return _search_tfidf_fallback(query, top_k)
 
     try:
         results = _collection.query(
@@ -256,7 +316,7 @@ def search_knowledge(query: str, top_k: int = 2) -> List[Dict[str, Any]]:
         )
     except Exception as e:
         print(f"[RAG] 检索失败: {e}")
-        return []
+        return _search_tfidf_fallback(query, top_k)
 
     if not results or not results.get("documents"):
         return []

@@ -583,14 +583,20 @@ async def _execute_command_impl(intent: Dict[str, Any]) -> Dict[str, Any]:
     # ---- 多设备扩展：curtain.all / light.all 等泛指目标 ----
     if dev_id.endswith(".all"):
         short_type = dev_id[:-4]  # curtain.all -> curtain
+        type_labels = {"curtain": "窗帘", "light": "灯", "ac": "空调", "tv": "电视"}
+        type_label = type_labels.get(short_type, short_type)
         results = []
         messages = []
+        seen_msgs = set()
         async with state_lock:
             targets = [k for k, v in DEVICE_STATES.items() if v["type"] == short_type]
         for target_id in targets:
+            async with state_lock:
+                room = DEVICE_STATES[target_id].get("room", "")
+            room_label = f"{room}{type_label}" if room else type_label
             sub_intent = {
                 "device_id": target_id,
-                "device_name": intent.get("device_name", ""),
+                "device_name": room_label,
                 "action": action,
                 "value": value,
                 "value_type": value_type,
@@ -598,8 +604,10 @@ async def _execute_command_impl(intent: Dict[str, Any]) -> Dict[str, Any]:
             }
             sub_result = await _execute_command_impl(sub_intent)
             results.append(sub_result)
-            if sub_result.get("message"):
-                messages.append(sub_result["message"])
+            msg = sub_result.get("message", "")
+            if msg and msg not in seen_msgs:
+                seen_msgs.add(msg)
+                messages.append(msg)
         all_ok = all(r.get("success", False) for r in results)
         return {
             "success": all_ok,
