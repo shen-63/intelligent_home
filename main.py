@@ -1829,6 +1829,9 @@ async def voice_to_speech_reply(
 
 
 # ============ 共享 TTS 响应辅助函数 ============
+# TTS 临时音频目录：不要放在项目根目录（否则批量清理 match "tts_*" 时容易误伤源码）
+TTS_TEMP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "temp_audio")
+
 
 async def _tts_file_response(
     reply_text: str,
@@ -1842,10 +1845,11 @@ async def _tts_file_response(
     自动处理：文本清洗 → 合成 → stale 文件清理 → 元数据编码 → FileResponse。
     """
     # Clean + synthesize via the new helper
+    resolved_voice = CHINESE_VOICES.get(voice) if voice in CHINESE_VOICES else voice
     result = await synthesize_to_response(
         reply_text,
-        tts_dir=".",
-        voice=CHINESE_VOICES.get(voice, voice),
+        voice=resolved_voice,
+        tts_dir=TTS_TEMP_DIR,
     )
     tts_path = result["file_path"]
     cleaned_text = result["cleaned_text"]

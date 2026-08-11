@@ -116,14 +116,34 @@ def clean_tts_text(raw_text: str) -> str:
 # ============ 临时文件清理 ============
 
 def _cleanup_stale_temp_files(tts_dir: str, max_age: int = TEMP_TTL_SEC) -> None:
-    """清理 tts_dir 中超过 max_age 秒的 tts_*.mp3 临时文件。"""
+    """清理 tts_dir 中超过 max_age 秒的 tts_*.mp3 临时音频文件。
+
+    安全约束（防止误删源码）：
+    1. 只处理后缀为 .mp3 / .wav / .m4a / .aac / .flac 等音频文件
+    2. 跳过所有 .py / .pyc / .pyo / .pyd 源码文件
+    3. 文件名必须是 tts_<uuid>.mp3 或 reply_<id>.mp3 格式
+    4. 不扫描 tts_dir 外的路径（tts_dir 应为专用目录，而不是项目根目录）
+    """
     if not os.path.isdir(tts_dir):
         return
+    _ALLOWED_AUDIO_EXTS = (".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg", ".opus")
+    _DANGEROUS_EXTS = (".py", ".pyc", ".pyo", ".pyd", ".md", ".json", ".txt", ".yaml", ".yml", ".toml")
+    _ALLOWED_PREFIXES = ("tts_", "reply_", "temp_")
     now = time.time()
     for fname in os.listdir(tts_dir):
-        if not fname.startswith("tts_"):
-            continue
         fpath = os.path.join(tts_dir, fname)
+        if not os.path.isfile(fpath):
+            continue
+        lower = fname.lower()
+        # 三重保护：黑名单后缀（源码/文档）一律跳过
+        if lower.endswith(_DANGEROUS_EXTS):
+            continue
+        # 前缀白名单：只处理临时音频生成格式
+        if not any(lower.startswith(p) for p in _ALLOWED_PREFIXES):
+            continue
+        # 后缀白名单：只删真正的音频文件
+        if not lower.endswith(_ALLOWED_AUDIO_EXTS):
+            continue
         try:
             if now - os.path.getmtime(fpath) > max_age:
                 os.remove(fpath)

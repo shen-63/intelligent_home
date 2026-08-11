@@ -36,6 +36,9 @@ ENV/
 logs/
 
 # ============ Runtime Temp Files (TTS / ASR) ============
+# 新的 TTS 临时音频专属目录（不再放在项目根目录，避免误删源码）
+temp_audio/
+# 旧规则（保留下属兼容）：根目录下直接生成的临时音频
 temp_*.wav
 temp_*.mp3
 temp_*.m4a
@@ -43,6 +46,9 @@ temp_*.raw
 temp_tts_*.mp3
 tts_*.mp3
 reply_*.mp3
+# ASR 临时音频目录
+asr_temp/
+temp_asr/
 
 # ============ Core Source Files (PROTECTED - do not ignore) ============
 # These are critical; explicitly whitelist them so they're never accidentally ignored
