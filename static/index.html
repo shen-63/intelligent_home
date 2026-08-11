@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智能语音管家</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0f0f14;
+    --card: rgba(255,255,255,0.06);
+    --border: rgba(255,255,255,0.12);
+    --text: #e8e8ef;
+    --text-dim: #8a8a99;
+    --accent: #6c5ce7;
+    --accent2: #a29bfe;
+    --green: #00cec9;
+    --red: #ff6b6b;
+    --orange: #fdcb6e;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: radial-gradient(ellipse at top, #1a1a2e 0%, var(--bg) 60%);
+    color: var(--text);
+    min-height: 100vh;
+    overflow: hidden;
+    height: 100vh;
+  }
+  .app {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    height: 100vh;
+  }
+  /* Sidebar */
+  .sidebar {
+    background: rgba(255,255,255,0.03);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    overflow: hidden;
+  }
+  .sidebar h1 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    background: linear-gradient(135deg, var(--accent2), var(--green));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .sidebar .subtitle {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 24px;
+  }
+  .panel-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s infinite;
+  }
+  .status-dot.off { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+  .devices {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+  .device {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    transition: all 0.3s;
+  }
+  .device.device-off {
+    opacity: 0.5;
+    filter: grayscale(0.6);
+  }
+  .device.device-off .device-icon {
+    opacity: 0.6;
+  }
+  .device.active {
+    border-color: var(--accent);
+    background: rgba(108,92,231,0.12);
+  }
+  .device-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    margin-right: 10px;
+  }
+  .device-info { flex: 1; min-width: 0; }
+  .device-name { font-size: 14px; font-weight: 500; }
+  .device-state { font-size: 11px; color: var(--text-dim); }
+  .device-row { display: flex; align-items: center; flex: 1; }
+
+  .settings {
+    margin-top: auto;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .setting {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+  }
+  .setting select, .setting input {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    outline: none;
+  }
+  .setting select:focus { border-color: var(--accent); }
+
+  /* Main chat area */
+  .main {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: relative;
+  }
+  .chat-header {
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(15,15,20,0.6);
+    backdrop-filter: blur(10px);
+  }
+  .chat-title {
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .chat-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    scroll-behavior: smooth;
+  }
+  .chat-body::-webkit-scrollbar { width: 6px; }
+  .chat-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .message {
+    display: flex;
+    gap: 12px;
+    max-width: 80%;
+    animation: fadeInUp 0.4s ease;
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .message.user { align-self: flex-end; flex-direction: row-reverse; }
+  .message-avatar {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .message.user .message-avatar { background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+  .message.assistant .message-avatar { background: linear-gradient(135deg, var(--green), #00b894); }
+
+  .bubble {
+    padding: 14px 18px;
+    border-radius: 18px;
+    font-size: 15px;
+    line-height: 1.6;
+    position: relative;
+  }
+  .message.user .bubble {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-bottom-right-radius: 4px;
+    color: white;
+  }
+  .message.assistant .bubble {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+  }
+  .bubble .meta {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .bubble audio { margin-top: 8px; width: 220px; }
+  .typing { display: inline-flex; gap: 4px; }
+  .typing span {
+    width: 6px; height: 6px;
+    background: var(--text-dim);
+    border-radius: 50%;
+    animation: bounce 1.4s infinite ease-in-out;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.16s; }
+  .typing span:nth-child(3) { animation-delay: 0.32s; }
+  @keyframes bounce {
+    0%,80%,100% { transform: scale(0); }
+    40% { transform: scale(1); }
+  }
+
+  /* Voice input area */
+  .voice-area {
+    padding: 18px 28px 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    background: linear-gradient(to top, rgba(15,15,20,0.9) 0%, transparent 100%);
+  }
+  #voiceInput {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+  }
+  .hidden { display: none !important; }
+  .waveform {
+    width: 100%;
+    max-width: 400px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+  }
+  .waveform .bar {
+    width: 4px;
+    background: linear-gradient(to top, var(--accent), var(--accent2));
+    border-radius: 3px;
+    transition: height 0.05s ease;
+  }
+  .waveform.active .bar {
+    animation: wave 0.6s ease-in-out infinite alternate;
+  }
+  @keyframes wave {
+    from { transform: scaleY(0.3); }
+    to { transform: scaleY(1); }
+  }
+  .record-btn {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    box-shadow: 0 4px 20px rgba(108,92,231,0.4);
+    position: relative;
+  }
+  .record-btn:hover { transform: scale(1.05); }
+  .record-btn.recording {
+    background: linear-gradient(135deg, var(--red), #ff8e8e);
+    box-shadow: 0 4px 30px rgba(255,107,107,0.5);
+    animation: recPulse 1.5s infinite;
+  }
+  @keyframes recPulse {
+    0%,100% { box-shadow: 0 4px 30px rgba(255,107,107,0.5); }
+    50% { box-shadow: 0 4px 50px rgba(255,107,107,0.8); }
+  }
+  .record-btn svg { width: 30px; height: 30px; fill: white; }
+  .record-hint {
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .record-hint .recording-text { color: var(--red); font-weight: 600; }
+
+  /* Text input mode */
+  .text-input-area {
+    display: none;
+    width: 100%;
+    max-width: 560px;
+    gap: 10px;
+    justify-content: center;
+  }
+  .text-input-area.active {
+    display: flex;
+  }
+  .text-input {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 16px;
+    border-radius: 24px;
+    font-size: 15px;
+    outline: none;
+    resize: none;
+    font-family: inherit;
+    max-height: 120px;
+    min-height: 46px;
+    line-height: 1.5;
+  }
+  .text-input:focus { border-color: var(--accent); }
+  .text-send-btn {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .text-send-btn:hover { transform: scale(1.08); }
+  .text-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .text-send-btn svg { width: 20px; height: 20px; fill: white; }
+
+  .mode-switch {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px;
+  }
+  .mode-switch button {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    padding: 6px 16px;
+    border-radius: 18px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .mode-switch button.active {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+  }
+
+  .loading {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .loading.show { display: flex; }
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent2);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: rgba(30,30,40,0.95);
+    border: 1px solid var(--border);
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    z-index: 1000;
+    transition: transform 0.3s;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.error { border-color: var(--red); }
+  .toast.success { border-color: var(--green); }
+
+  @media (max-width: 768px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div>
+      <h1>🏠 智能语音管家</h1>
+      <div class="subtitle">语音控制 · 全屋互联</div>
+    </div>
+
+    <div class="panel-title"><span class="status-dot"></span>设备状态</div>
+    <div class="devices" id="deviceList">
+      <div class="device"><div class="device-row"><div class="device-icon" style="background:rgba(108,92,231,0.2)">❄️</div><div class="device-info"><div class="device-name">卧室空调</div><div class="device-state">关</div></div></div></div>
+      <div class="device"><div class="device-row"><div class="device-icon" style="background:rgba(253,203,110,0.2)">💡</div><div class="device-info"><div class="device-name">卧室灯</div><div class="device-state">关</div></div></div></div>
+      <div class="device"><div class="device-row"><div class="device-icon" style="background:rgba(108,92,231,0.2)">❄️</div><div class="device-info"><div class="device-name">客厅空调</div><div class="device-state">关</div></div></div></div>
+      <div class="device"><div class="device-row"><div class="device-icon" style="background:rgba(253,203,110,0.2)">💡</div><div class="device-info"><div class="device-name">客厅灯</div><div class="device-state">关</div></div></div></div>
+      <div class="device"><div class="device-row"><div class="device-icon" style="background:rgba(0,206,201,0.2)">🪟</div><div class="device-info"><div class="device-name">卧室窗帘</div><div class="device-state">已关闭</div></div></div></div>
+      <div class="device"><div class="device-row"><div class="device-icon" style="background:rgba(0,206,201,0.2)">🪟</div><div class="device-info"><div class="device-name">客厅窗帘</div><div class="device-state">已关闭</div></div></div></div>
+    </div>
+
+    <div class="settings">
+      <div class="setting">
+        <span>AI 模式</span>
+        <select id="modeSelect">
+          <option value="local">本地规则</option>
+          <option value="dify">Dify 大脑</option>
+        </select>
+      </div>
+      <div class="setting">
+        <span>语音</span>
+        <select id="voiceSelect">
+          <option value="xiaoxiao">晓晓 (女声)</option>
+          <option value="xiaoyi">晓伊 (女声)</option>
+          <option value="xiaohui">晓慧 (女声)</option>
+          <option value="yunxi">云希 (男声)</option>
+          <option value="yunyang">云扬 (男声)</option>
+        </select>
+      </div>
+      <div class="setting">
+        <span>服务</span>
+        <span id="serverStatus" style="color:var(--green);font-size:12px;">● 在线</span>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="chat-header">
+      <div class="chat-title">💬 对话</div>
+      <button id="clearBtn" style="background:none;border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;">清空对话</button>
+    </div>
+
+    <div class="chat-body" id="chatBody">
+      <div class="message assistant">
+        <div class="message-avatar">🤖</div>
+        <div class="bubble">
+          你好，我是智能家居语音管家。<br>
+          按住下方麦克风按钮说话即可，我可以帮你控制家里的设备。
+          <div class="meta">试试说："打开卧室空调"</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="voice-area">
+      <div class="mode-switch">
+        <button class="active" id="voiceModeBtn" onclick="setInputMode('voice')">🎤 语音</button>
+        <button id="textModeBtn" onclick="setInputMode('text')">⌨️ 文字</button>
+      </div>
+
+      <!-- 语音输入 -->
+      <div id="voiceInput">
+        <div class="waveform" id="waveform"></div>
+        <div class="loading" id="loading">
+          <div class="spinner"></div>
+          <span id="loadingText">正在识别中...</span>
+        </div>
+        <button class="record-btn" id="recordBtn" title="按住说话">
+          <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.49 6-3.31 6-6.72h-1.7z"/></svg>
+        </button>
+        <div class="record-hint" id="recordHint">按住说话</div>
+      </div>
+
+      <!-- 文字输入 -->
+      <div id="textInput" class="text-input-area">
+        <textarea class="text-input" id="textInputField" placeholder="输入指令，例如：打开卧室空调" rows="1" onkeydown="handleTextKey(event)"></textarea>
+        <button class="text-send-btn" id="textSendBtn" onclick="sendTextMessage()" title="发送">
+          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'http://localhost:8001';
+const sessionId = 'web_' + Math.random().toString(36).slice(2, 10);
+let conversationId = null;
+let mediaRecorder = null;
+let audioChunks = [];
+let audioContext = null;
+let analyser = null;
+let dataArray = null;
+let mediaStream = null;
+let waveBars = [];
+let waveAnimId = null;
+let isRecording = false;
+let recordStartTime = 0;
+
+const recordBtn = document.getElementById('recordBtn');
+const recordHint = document.getElementById('recordHint');
+const waveform = document.getElementById('waveform');
+const loading = document.getElementById('loading');
+const loadingText = document.getElementById('loadingText');
+const chatBody = document.getElementById('chatBody');
+const modeSelect = document.getElementById('modeSelect');
+const voiceSelect = document.getElementById('voiceSelect');
+const deviceList = document.getElementById('deviceList');
+const toast = document.getElementById('toast');
+const clearBtn = document.getElementById('clearBtn');
+
+// Init waveform bars
+for (let i = 0; i < 40; i++) {
+  const bar = document.createElement('div');
+  bar.className = 'bar';
+  bar.style.height = '4px';
+  waveform.appendChild(bar);
+  waveBars.push(bar);
+}
+
+// Toast
+function showToast(msg, type = '') {
+  toast.textContent = msg;
+  toast.className = 'toast show ' + type;
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// Check server
+async function checkServer() {
+  try {
+    const res = await fetch(API + '/api/v1/health');
+    const data = await res.json();
+    const el = document.getElementById('serverStatus');
+    el.textContent = data.model_loaded ? '● 在线' : '● 离线';
+    el.style.color = data.model_loaded ? 'var(--green)' : 'var(--red)';
+    if (data.devices) renderDevices(data.devices, data.device_states);
+  } catch {
+    const el = document.getElementById('serverStatus');
+    el.textContent = '● 离线';
+    el.style.color = 'var(--red)';
+  }
+}
+
+function renderDevices(devices, states) {
+  const icons = { bedroom_ac: '❄️', living_room_ac: '❄️', bedroom_light: '💡', living_room_light: '💡', bedroom_curtain: '🪟', living_room_curtain: '🪟', bedroom_tv: '📺', living_room_tv: '📺' };
+  const names = { bedroom_ac: '卧室空调', living_room_ac: '客厅空调', bedroom_light: '卧室灯', living_room_light: '客厅灯', bedroom_curtain: '卧室窗帘', living_room_curtain: '客厅窗帘', bedroom_tv: '卧室电视', living_room_tv: '客厅电视' };
+  const colorMap = { bedroom_ac: 'rgba(108,92,231,0.2)', living_room_ac: 'rgba(108,92,231,0.2)', bedroom_light: 'rgba(253,203,110,0.2)', living_room_light: 'rgba(253,203,110,0.2)', bedroom_curtain: 'rgba(0,206,201,0.2)', living_room_curtain: 'rgba(0,206,201,0.2)', bedroom_tv: 'rgba(255,107,107,0.2)', living_room_tv: 'rgba(255,107,107,0.2)' };
+
+  const acModeNames = { cooling: '制冷', heating: '制热', dehumidify: '除湿', fan: '送风', auto: '自动' };
+  const acSwingNames = { vertical: '上下扫风', horizontal: '左右扫风', off: '关扫风' };
+  const acFanNames = { quiet: '静音', 1: '1档', 2: '2档', 3: '3档', 4: '4档', 5: '5档', auto: '自动' };
+
+  deviceList.innerHTML = devices.map(d => {
+    const state = states?.[d] || {};
+    const isCurtain = state.type === 'curtain';
+    const power = isCurtain ? (state.state === 'open' ? 'on' : 'off') : (state.power || 'off');
+    const on = power === 'on';
+
+    let stateText = '';
+    if (state.type === 'curtain') {
+      stateText = state.state === 'open' ? '已拉开' : '已关闭';
+    } else if (!on) {
+      // 关闭状态：只显示"关"，置灰
+      stateText = '关';
+    } else if (state.type === 'ac') {
+      stateText = `开 · ${state.temperature}°`;
+      if (state.mode) stateText += ` · ${acModeNames[state.mode] || state.mode}`;
+      if (state.swing && state.swing !== 'off') stateText += ` · ${acSwingNames[state.swing] || state.swing}`;
+      if (state.fan_speed) stateText += ` · ${acFanNames[state.fan_speed] || state.fan_speed}`;
+    } else if (state.type === 'light') {
+      stateText = '开';
+    } else if (state.type === 'tv') {
+      stateText = '开';
+    } else {
+      stateText = '开';
+    }
+
+    const dimClass = on ? '' : ' device-off';
+
+    return `
+      <div class="device${dimClass}">
+        <div class="device-row">
+          <div class="device-icon${dimClass}" style="background:${colorMap[d] || 'var(--card)'}">${icons[d] || '🔌'}</div>
+          <div class="device-info">
+            <div class="device-name">${names[d] || d}</div>
+            <div class="device-state">${stateText}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateDeviceStates(response) {
+  const raw = response.headers.get('X-Device-States');
+  if (!raw) return;
+  try {
+    const decoded = decodeURIComponent(raw).replace(/\+/g, ' ');
+    const params = Object.fromEntries(decoded.split('&').map(p => p.split('=')));
+    if (params.states) {
+      const states = JSON.parse(params.states);
+      const devices = Object.keys(states);
+      renderDevices(devices, states);
+    }
+  } catch (e) {
+    console.warn('Failed to parse device states:', e);
+  }
+}
+
+// Recording
+async function startRecording() {
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, sampleRate: 16000 } });
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioContext.createMediaStreamSource(mediaStream);
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 256;
+    source.connect(analyser);
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+    mediaRecorder = new MediaRecorder(mediaStream, { mimeType: 'audio/webm' });
+    audioChunks = [];
+    mediaRecorder.ondata = e => audioChunks.push(e.data);
+    mediaRecorder.onstop = handleRecordingDone;
+    mediaRecorder.start();
+
+    isRecording = true;
+    recordStartTime = Date.now();
+    recordBtn.classList.add('recording');
+    waveform.classList.add('active');
+    recordHint.innerHTML = '<span class="recording-text">● 录音中...</span> 松开发送';
+    drawWaveform();
+  } catch (e) {
+    showToast('无法访问麦克风: ' + e.message, 'error');
+  }
+}
+
+function stopRecording() {
+  if (!isRecording) return;
+  isRecording = false;
+  const duration = (Date.now() - recordStartTime) / 1000;
+  if (duration < 0.3) {
+    recordHint.textContent = '说话时间太短，再试一次';
+    setTimeout(() => recordHint.textContent = '按住说话', 1500);
+  }
+  mediaRecorder.stop();
+  mediaStream.getTracks().forEach(t => t.stop());
+  waveform.classList.remove('active');
+  recordBtn.classList.remove('recording');
+  recordHint.textContent = '按住说话';
+  if (waveAnimId) cancelAnimationFrame(waveAnimId);
+  waveBars.forEach(b => b.style.height = '4px');
+}
+
+function drawWaveform() {
+  if (!analyser || !isRecording) return;
+  analyser.getByteFrequencyData(dataArray);
+  const step = Math.floor(dataArray.length / waveBars.length);
+  for (let i = 0; i < waveBars.length; i++) {
+    const val = dataArray[i * step] || 0;
+    const h = Math.max(4, (val / 255) * 45);
+    waveBars[i].style.height = h + 'px';
+  }
+  waveAnimId = requestAnimationFrame(drawWaveform);
+}
+
+async function handleRecordingDone() {
+  const blob = new Blob(audioChunks, { type: 'audio/webm' });
+  const duration = (Date.now() - recordStartTime) / 1000;
+  if (duration < 0.3) return;
+
+  loadingText.textContent = '正在识别中...';
+  loading.classList.add('show');
+
+  try {
+    const mode = modeSelect.value;
+    const voice = voiceSelect.value;
+    const url = new URL(API + '/api/v1/voice_tts');
+    url.searchParams.set('mode', mode);
+    url.searchParams.set('voice', voice);
+    url.searchParams.set('session_id', sessionId);
+    url.searchParams.set('user_id', sessionId);
+    if (conversationId) url.searchParams.set('conversation_id', conversationId);
+
+    const formData = new FormData();
+    formData.append('file', blob, 'recording.webm');
+
+    const response = await fetch(url.toString(), { method: 'POST', body: formData });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || '请求失败');
+    }
+
+    const asrText = response.headers.get('X-Voice-Meta')
+      ? Object.fromEntries(decodeURIComponent(response.headers.get('X-Voice-Meta')).replace(/\+/g, ' ').split('&').map(p => p.split('=')))
+      : {};
+
+    updateDeviceStates(response);
+
+    const audioBlob = await response.blob();
+    const userText = asrText.asr || '(语音识别中...)';
+    const replyText = asrText.reply || '';
+
+    addMessage('user', userText);
+    addMessage('assistant', replyText, audioBlob);
+
+  } catch (e) {
+    showToast('请求失败: ' + e.message, 'error');
+    addMessage('assistant', '抱歉，出了点问题: ' + e.message);
+  } finally {
+    loading.classList.remove('show');
+  }
+}
+
+function addMessage(role, text, audioBlob = null) {
+  const div = document.createElement('div');
+  div.className = 'message ' + role;
+
+  const avatar = document.createElement('div');
+  avatar.className = 'message-avatar';
+  avatar.textContent = role === 'user' ? '👤' : '🤖';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+
+  if (text === 'typing') {
+    bubble.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+  } else {
+    bubble.textContent = text;
+    if (audioBlob) {
+      const audio = document.createElement('audio');
+      audio.controls = true;
+      audio.autoplay = true;
+      audio.src = URL.createObjectURL(audioBlob);
+      bubble.appendChild(document.createElement('br'));
+      bubble.appendChild(audio);
+    }
+  }
+
+  if (role === 'user') {
+    div.appendChild(bubble);
+    div.appendChild(avatar);
+  } else {
+    div.appendChild(avatar);
+    div.appendChild(bubble);
+  }
+
+  chatBody.appendChild(div);
+  chatBody.scrollTop = chatBody.scrollHeight;
+  return bubble;
+}
+
+// Event listeners
+let holdTimer = null;
+recordBtn.addEventListener('mousedown', startRecording);
+recordBtn.addEventListener('touchstart', e => { e.preventDefault(); startRecording(); });
+document.addEventListener('mouseup', stopRecording);
+document.addEventListener('touchend', stopRecording);
+
+clearBtn.addEventListener('click', () => {
+  chatBody.innerHTML = '';
+  conversationId = null;
+  addMessage('assistant', '对话已清空。有什么可以帮你的？');
+});
+
+// ------- 文字输入切换 -------
+function setInputMode(mode) {
+  const voiceBtn = document.getElementById('voiceModeBtn');
+  const textBtn = document.getElementById('textModeBtn');
+  const voiceInput = document.getElementById('voiceInput');
+  const textInput = document.getElementById('textInput');
+
+  if (mode === 'voice') {
+    voiceBtn.classList.add('active');
+    textBtn.classList.remove('active');
+    voiceInput.classList.remove('hidden');
+    textInput.classList.remove('active');
+  } else {
+    textBtn.classList.add('active');
+    voiceBtn.classList.remove('active');
+    voiceInput.classList.add('hidden');
+    textInput.classList.add('active');
+  }
+}
+
+// ------- 文字发送 -------
+function handleTextKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendTextMessage();
+  }
+}
+
+async function sendTextMessage() {
+  const field = document.getElementById('textInputField');
+  const text = field.value.trim();
+  if (!text) return;
+  field.value = '';
+  field.style.height = 'auto';
+
+  addMessage('user', text);
+
+  const mode = modeSelect.value;
+  const voice = voiceSelect.value;
+
+  loadingText.textContent = '正在思考中...';
+  loading.classList.add('show');
+
+  try {
+    const url = new URL(API + '/api/v1/text_chat');
+    url.searchParams.set('mode', mode);
+    url.searchParams.set('voice', voice);
+    url.searchParams.set('text', text);
+    url.searchParams.set('session_id', sessionId);
+    url.searchParams.set('user_id', sessionId);
+    if (conversationId) url.searchParams.set('conversation_id', conversationId);
+
+    const response = await fetch(url.toString(), { method: 'POST' });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || '请求失败');
+    }
+
+    const meta = response.headers.get('X-Voice-Meta')
+      ? Object.fromEntries(decodeURIComponent(response.headers.get('X-Voice-Meta')).replace(/\+/g, ' ').split('&').map(p => p.split('=')))
+      : {};
+
+    updateDeviceStates(response);
+
+    const audioBlob = await response.blob();
+    const replyText = meta.reply || '(无回复)';
+
+    addMessage('assistant', replyText, audioBlob);
+
+  } catch (e) {
+    showToast('请求失败: ' + e.message, 'error');
+    addMessage('assistant', '抱歉，出了点问题，请稍后重试');
+  } finally {
+    loading.classList.remove('show');
+  }
+}
+
+// Init
+checkServer();
+</script>
+</body>
+</html>

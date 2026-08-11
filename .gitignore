@@ -1,0 +1,53 @@
+# ============ Python ============
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ============ Virtual Environment ============
+Agent_env/
+venv/
+env/
+ENV/
+.venv/
+
+# ============ IDE / Editor ============
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ============ Environment / Secrets ============
+.env
+.env.local
+.env.*.local
+
+# ============ Logs ============
+*.log
+logs/
+
+# ============ Runtime Temp Files (TTS / ASR) ============
+temp_*.wav
+temp_*.mp3
+temp_*.m4a
+temp_*.raw
+temp_tts_*.mp3
+tts_*.mp3
+reply_*.mp3
+
+# ============ Database (Chroma vector DB - regeneratable from data/knowledge/) ============
+data/chroma/*
+!data/chroma/.gitkeep
+
+# ============ Large Binaries (redownloadable from official site) ============
+ffmpeg.exe
+ffprobe.exe
