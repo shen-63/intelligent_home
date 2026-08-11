@@ -44,6 +44,19 @@ temp_tts_*.mp3
 tts_*.mp3
 reply_*.mp3
 
+# ============ Core Source Files (PROTECTED - do not ignore) ============
+# These are critical; explicitly whitelist them so they're never accidentally ignored
+!tts_service.py
+!main.py
+!nlu_parser.py
+!device_controller.py
+!smart_brain.py
+!router.py
+!config.py
+!rag_service.py
+!dialog_manager.py
+!mppt_client.py
+
 # ============ Database (Chroma vector DB - regeneratable from data/knowledge/) ============
 data/chroma/*
 !data/chroma/.gitkeep
