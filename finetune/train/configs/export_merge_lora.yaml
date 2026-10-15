@@ -1,0 +1,17 @@
+# LLaMA-Factory 导出：把 LoRA adapter 合并回基座 HF（fp16/bf16）
+#   输出：saves/qwen2.5-1.5b-nlu-merged/  （HF 格式，直接可被 ollama import 或 llama.cpp convert）
+# 运行：
+#   llamafactory-cli export finetune/train/configs/export_merge_lora.yaml
+# =================================================================
+
+model_name_or_path: "Qwen/Qwen2.5-1.5B-Instruct"
+adapter_name_or_path: "../train/saves/qwen2.5-1.5b-nlu-lora"
+template: qwen
+finetuning_type: lora
+
+# ---- 导出目标：HF 格式（合并 LoRA 权重 + 基座权重）----
+export_dir: "../train/saves/qwen2.5-1.5b-nlu-merged"
+export_format: hf
+export_size: 2
+export_device: cpu
+export_legacy_format: false

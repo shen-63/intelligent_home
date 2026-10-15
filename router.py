@@ -11,7 +11,41 @@ from typing import Literal
 
 from nlu_parser import DEVICE_MAP, ACTION_PATTERNS
 
-IntentType = Literal["device_control", "knowledge_qa"]
+IntentType = Literal["device_control", "knowledge_qa", "device_query"]
+
+# ==================== 状态查询特征词（最高优先级：查询绝对不是控制，严禁发 MQTT）====================
+# Type 1：单设备开关状态问句（句尾疑问/反诘）
+_DEVICE_QUERY_POWER_PATTERNS = [
+    r'开着(?:嘛|吗|么|呐|没)',            # 开着嘛 / 开着吗 / 开着没
+    r'关(?:了|着)(?:嘛|吗|么|没|呐)',      # 关了吗 / 关着没 / 关了没
+    r'开(?:了|过)(?:嘛|吗|么|没|呐)',      # 开了吗 / 开了没
+    r'是不是(?:开|关|亮|灭)着(?:的|呀)?',
+    r'有没(?:有|开|关)',
+    r'(?:现在|目前|这会儿|此刻).*(?:开|关|亮|灭).*吗',
+    # 条件查询常见开头（强信号：用户想先知道状态）
+    r'^看看.{0,6}(?:开|关|亮)',
+    r'^查(?:查|一下|看).{0,6}(?:开|关|亮|温度|度|档位|模式|风速)',
+]
+
+# Type 2：列表/聚合状态问句（哪些灯亮着 / 哪些设备开着 等）
+_DEVICE_QUERY_LIST_PATTERNS = [
+    r'有哪些(?:灯|设备|家电|电器|空调)(?:亮着|开着|关着|在开|在关|运行)?',
+    r'(?:哪些|什么|啥)(?:灯|设备|家电|空调)(?:现在|目前)?(?:亮着|开着|关着|在开|在关|开的|关的)',
+    r'(?:灯|设备|家电).*有哪些(?:亮|开|关)',
+    r'家里.*(?:灯|设备).*(?:开着|亮着)',
+    r'(?:家里|屋|房间).*什么.*(?:灯|设备).*(?:开|关)',
+]
+
+# Type 3：属性数值问句（多少度 / 几度 / 几档 / 什么模式 / 风速多少 等）
+_DEVICE_QUERY_ATTR_PATTERNS = [
+    r'(?:是|有|现在|目前).*(?:多少|几).*(?:度|档|级|度设定)',
+    r'(?:是|有|现在|目前).*什么(?:模式|风向|扫风|风)',
+    r'(?:温度|风速|风力|风量|亮度|音量|声量|频道).*(?:是|多少|几|多大|多高)',
+    r'(?:现在|目前|这会儿).*(?:温度|风速|风力|档位|模式)',
+    r'(?:是|为).*(?:几度|几档|多少度|多少档)',
+    r'多少度$', r'几度$', r'几档$',
+    r'什么模式$',
+]
 
 # ==================== 设备控制关键词 ====================
 # 从 nlu_parser 的 DEVICE_MAP 中提取所有中文设备名
@@ -88,10 +122,11 @@ _ATTR_DEVICE_TYPE_BINDING: dict = {
 # 可被"属性推断设备"的泛化/具体设备ID白名单
 _ROOM_KEYWORDS = ["卧室", "主卧", "房间", "屋内", "里面", "客厅", "大厅", "起居室"]
 
-# 环境感知词（"很热"、"太暗"等隐式触发设备控制）
+# 环境感知词（"很热"、"太暗"、"太吵"等隐式触发设备控制）
 # 注意：此列表与 nlu_parser 的语义触发器保持一致
 _ENV_KEYWORDS = [
-    r'(?:很|太|特别|有点|好|超|巨)(?:热|闷|冷|冻|凉|黑|暗|亮|晃眼|刺眼)',
+    r'(?:很|太|特别|有点|好|超|巨)(?:热|闷|冷|冻|凉|黑|暗|亮|晃眼|刺眼|吵|响|闹|嘈杂)',
+    r'(?:声音|音量|声响).*(?:太|很|过|特别|有点)?(?:大|高|吵|响)',
     r'(?:没|未)(?:开|亮|启动)',
     r'(?:需要|想要|想|要)(?:开|启动|打开)',
     r'(?:空调|灯|电视|窗帘).*(?:没|未|不)(?:工作|开|启动|反应|亮)',
@@ -134,27 +169,47 @@ _KNOWLEDGE_DOMAIN_KEYWORDS = [
 ]
 
 
+def _is_device_query(text: str) -> bool:
+    """内部辅助：判断文本是否属于【纯状态查询】，命中则任何情况下绝不发 MQTT。"""
+    for p in _DEVICE_QUERY_POWER_PATTERNS:
+        if re.search(p, text):
+            return True
+    for p in _DEVICE_QUERY_LIST_PATTERNS:
+        if re.search(p, text):
+            return True
+    for p in _DEVICE_QUERY_ATTR_PATTERNS:
+        if re.search(p, text):
+            return True
+    return False
+
+
 def route_intent(user_text: str) -> IntentType:
     """
-    意图路由：判断用户输入是设备控制还是知识问答。
+    意图路由：判断请求走【设备查询(device_query)】/【设备控制(device_control)】/【知识问答(knowledge_qa)】。
 
-    策略（优先级从高到低）：
-    1. 💥相对控制指令（调高/调低 + 属性词）→ 强制 device_control，绝不走 RAG
-       （这是最高优先级，因为"调高2度"肯定是控制，而不是聊节能知识）
+    策略（优先级严格从高到低）：
+    0. 🚦【绝对最高：纯状态查询】→ device_query（只读内存状态，绝不发 MQTT）
+       - 覆盖 3 类：单设备开关问句 / 聚合列表问句 / 属性数值问句
+    1. 💥相对控制指令（调高/调低 + 属性词）→ 强制 device_control
     2. 属性强绑定命中（温度/风速/制冷/制热/亮度/音量）→ 强制 device_control
     3. 优先检测知识问答信号（疑问句式 + 知识领域 → knowledge_qa）
     4. 检测设备控制信号（设备词/动作词/场景词/数值/环境感知 → 设备控制）
     5. 默认：非疑问句一律走设备控制，疑问句走知识问答
 
     Returns:
-        "device_control" 或 "knowledge_qa"
+        "device_query" | "device_control" | "knowledge_qa"
     """
     if not user_text or not user_text.strip():
         return "knowledge_qa"
 
     text = user_text.strip()
 
-    # ==================== 【最高优先级：增量/相对控制】 ====================
+    # ==================== 【0. 绝对最高优先级：纯设备状态查询】 ====================
+    #    （在增量控制/属性绑定 之前拦截！避免"开着吗/多少度"命中 has_action 后被误路由）
+    if _is_device_query(text):
+        return "device_query"
+
+    # ==================== 【1. 增量/相对控制】 ====================
     # 相对词（调高、调小、大一点 等）
     has_delta = any(kw in text for kw in _DELTA_ACTION_KEYWORDS)
     # 可增量调节的属性词（温度、风速、亮度、音量 等）
@@ -278,6 +333,8 @@ def route_intent_with_confidence(user_text: str) -> dict:
     bound_type_list = [t for kw, t in _ATTR_DEVICE_TYPE_BINDING.items() if kw in text]
     has_attr_binding = len(bound_type_list) > 0
     has_question = any(re.search(p, text) for p in _QUESTION_PATTERNS)
+    # 【★ 新增】状态查询信号（最高优先级的 True/False）
+    has_device_query = _is_device_query(text)
 
     signals = {
         "has_device": any(kw in text for kw in _DEVICE_KEYWORDS),
@@ -290,17 +347,22 @@ def route_intent_with_confidence(user_text: str) -> dict:
         "has_knowledge_domain": any(kw in text for kw in _KNOWLEDGE_DOMAIN_KEYWORDS),
         "has_weather": any(kw in text for kw in _WEATHER_KEYWORDS),
         "has_ac_attr": any(kw in text for kw in _AC_ATTRIBUTE_KEYWORDS),
-        # 新增：增量/相对控制 信号
+        # 增量/相对控制 信号
         "has_delta": has_delta,
         "has_delta_attr": has_delta_attr,
         "has_attr_binding": has_attr_binding,
         "bound_device_types": list(set(bound_type_list)),
+        # 【★ 新增】纯状态查询信号
+        "has_device_query": has_device_query,
     }
 
     intent = route_intent(text)
 
     # 置信度估算
-    if intent == "device_control":
+    if intent == "device_query":
+        # device_query 是特征词强匹配 → 置信度拉满
+        confidence = 0.95 if has_device_query else 0.5
+    elif intent == "device_control":
         score = 0.0
         if signals["has_device"]:
             score += 0.3

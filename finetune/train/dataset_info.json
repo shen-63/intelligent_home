@@ -1,0 +1,26 @@
+{
+  "nlu_train": {
+    "file_name": "../outputs/nlu_train.jsonl",
+    "formatting": "sharegpt",
+    "columns": {
+      "messages": "conversations",
+      "role": "from",
+      "content": "value"
+    },
+    "tags": {
+      "role_tag": true
+    }
+  },
+  "nlu_eval": {
+    "file_name": "../outputs/nlu_eval.jsonl",
+    "formatting": "sharegpt",
+    "columns": {
+      "messages": "conversations",
+      "role": "from",
+      "content": "value"
+    },
+    "tags": {
+      "role_tag": true
+    }
+  }
+}

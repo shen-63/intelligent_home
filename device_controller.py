@@ -1,4 +1,5 @@
-from typing import Dict, Any, Optional, List
+from __future__ import annotations
+from typing import Dict, Any, Optional, List, Tuple
 import asyncio
 import re
 
@@ -56,6 +57,157 @@ DEVICE_TYPE_NAMES: Dict[str, str] = {
 
 # 中文房间名 -> MQTT Topic 使用的英文 slug
 ROOM_ENG_MAP: Dict[str, str] = {"卧室": "bedroom", "客厅": "living_room"}
+# 英文 slug -> 中文名（给 impl 上层兜底拼装回复文案用）
+ROOM_SLUG_TO_CN: Dict[str, str] = {v: k for k, v in ROOM_ENG_MAP.items()}
+
+
+def _build_confirmation(intent: Dict[str, Any], fallback_reason: str = "") -> str:
+    """
+    【需求 3】确认文案强制非空兜底（只有在 impl 抛异常/返回空 message 时才用）。
+
+    会先从 intent.device_id / DEVICE_STATES 中取出"卧室空调/客厅窗帘"这种中文显示名，
+    再按 intent.action 拼出精准 confirmation：
+      - on  / turn_on  → "已为您开启{location}{device_name}。"
+      - off / turn_off → "已为您关闭{location}{device_name}。"
+      - set / set_temperature 且 value_type=temperature → "已为您把{display}温度调至 {value} 度。"
+      - set 其它 → "已为您设置好{display}。"
+    当所有信息都缺失时，才最后返回 "操作已完成。"。
+    """
+    try:
+        dev_id = ""
+        action = ""
+        value = None
+        value_type = None
+        if isinstance(intent, dict):
+            dev_id = str(intent.get("device_id") or "")
+            action = str(intent.get("action") or "")
+            value = intent.get("value")
+            value_type = intent.get("value_type")
+
+        # 1) 解析中文显示名 display（优先 DEVICE_STATES.room）
+        display = ""
+        if dev_id and dev_id in DEVICE_STATES:
+            st = DEVICE_STATES[dev_id]
+            room_cn = st.get("room") or ""
+            type_cn = DEVICE_TYPE_NAMES.get(st.get("type") or "", "")
+            if room_cn and type_cn:
+                display = room_cn + type_cn
+            elif isinstance(intent, dict) and isinstance(intent.get("device_name"), str):
+                display = intent["device_name"]
+        if not display and isinstance(intent, dict) and isinstance(intent.get("device_name"), str):
+            display = intent["device_name"]
+        if not display:
+            # 最后一招：从 device_id 中拆 bedroom/living_room
+            parts = dev_id.replace(".all", "").split("_")
+            if parts:
+                slug = parts[0]
+                type_short = "_".join(parts[1:]) if len(parts) > 1 else ""
+                room_cn = ROOM_SLUG_TO_CN.get(slug, slug)
+                type_cn = DEVICE_TYPE_NAMES.get(type_short, type_short)
+                if room_cn and type_cn:
+                    display = room_cn + type_cn
+                elif type_cn:
+                    display = type_cn
+
+        # 2) 动作归一化（和 _execute_command_impl 保持一致）
+        if action == "turn_on":
+            action = "on"
+        elif action == "turn_off":
+            action = "off"
+        elif action in ("set_temperature", "set_value", "adjust", "adjust_ac",
+                        "set_fan_mode", "set_hvac_mode", "set_swing_mode", "set_ac"):
+            action = "set"
+        elif action in ("open_curtain",):
+            action = "on"
+        elif action in ("close_curtain",):
+            action = "off"
+
+        # 3) 按 display + action 拼
+        if display:
+            if action in ("on", "open_curtain"):
+                return f"已为您开启{display}。"
+            if action in ("off", "close_curtain"):
+                return f"已为您关闭{display}。"
+            if action == "set":
+                if value_type == "temperature" and isinstance(value, (int, float)):
+                    return f"已为您将{display}温度调至 {int(value)} 度。"
+                if value is not None:
+                    return f"已为您将{display}设置为 {value}。"
+                return f"已为您设置好{display}。"
+            if action == "increase":
+                return f"已为您调高{display}。"
+            if action == "decrease":
+                return f"已为您调低{display}。"
+            # action 未知但有设备名 → 不说"操作已完成"，而是给个更友好的完成提示
+            return f"{display}操作已完成。"
+
+        # 4) 最后一道：真的什么都取不到
+        print(f"[Reply-Safe] _build_confirmation: 取不到设备名/动作，原因={fallback_reason!r}，降级为'操作已完成。'")
+        return "操作已完成。"
+    except Exception as e:
+        print(f"[Reply-Safe] _build_confirmation 异常: {e}，最终兜底为'操作已完成。'")
+        return "操作已完成。"
+
+# ======================================================================
+# 【★ 未注册设备检测 + 显式房间优先解析】
+# 解决：输入"打开书房灯"模糊回退成卧室灯的Bug。
+# 原则：用户显式提到"X房/厅 + Y(灯/空调/窗帘/电视)"时，若系统无此具体设备，
+#       直接报"未找到"，绝对不默认回退到其他房间。
+# ======================================================================
+
+# 【用户可能提到的所有空间词】→ 规范化的 room_cn key（与 DEVICE_STATES["room"] 对齐）
+#   注意：即使某个房间当前未注册设备，也要识别出这个词，避免把"书房灯"当"灯"回退卧室。
+_EXPLICIT_ROOM_KEYWORDS: List[Tuple[str, str]] = [
+    ("主卧", "卧室"), ("次卧", "卧室"), ("卧室", "卧室"), ("房间", "卧室"), ("屋里", "卧室"), ("里面", "卧室"),
+    ("客厅", "客厅"), ("大厅", "客厅"), ("起居室", "客厅"), ("厅里", "客厅"),
+    ("书房", "书房"), ("书斋", "书房"),
+    ("厨房", "厨房"), ("后厨", "厨房"), ("饭厅", "餐厅"), ("餐厅", "餐厅"),
+    ("卫生间", "卫生间"), ("厕所", "卫生间"), ("洗手间", "卫生间"), ("浴室", "卫生间"), ("卫浴", "卫生间"),
+    ("阳台", "阳台"), ("露台", "阳台"),
+    ("儿童房", "儿童房"), ("小孩房", "儿童房"), ("婴儿房", "儿童房"),
+    ("书房", "书房"), ("阁楼", "阁楼"), ("地下室", "地下室"), ("玄关", "玄关"), ("走廊", "走廊"),
+    ("家里", ""), ("全屋", ""), ("整个屋子", ""), ("所有房间", ""),
+]
+
+# 设备类型中文别称 -> dev_type key
+_EXPLICIT_TYPE_KEYWORDS: List[Tuple[str, str]] = [
+    ("空调", "ac"), ("冷气", "ac"), ("冷气机", "ac"), ("中央空调", "ac"),
+    ("灯", "light"), ("灯光", "light"), ("电灯", "light"), ("照明灯", "light"),
+    ("窗帘", "curtain"), ("窗纱", "curtain"), ("帘子", "curtain"),
+    ("电视", "tv"), ("电视机", "tv"), ("彩电", "tv"),
+]
+
+def _extract_explicit_room_and_type(raw_text: str) -> Optional[Tuple[str, str, str, str]]:
+    """
+    从用户原始文本中提取【显式】房间+设备类型的组合。
+    返回 (room_cn_key, room_original_word, dev_type, type_original_word)；若未同时提取到两者返回 None。
+    例："打开书房灯" → ("书房", "书房", "light", "灯")
+        "厨房空调调到24度" → ("厨房", "厨房", "ac", "空调")
+        "打开灯" → None（没提房间）
+    """
+    if not raw_text:
+        return None
+    room_hit: Optional[Tuple[int, str, str]] = None  # (pos, room_cn, original)
+    type_hit: Optional[Tuple[int, str, str]] = None  # (pos, dev_type, original)
+    for original, room_cn in _EXPLICIT_ROOM_KEYWORDS:
+        pos = raw_text.find(original)
+        if pos >= 0 and (room_hit is None or pos < room_hit[0]):
+            room_hit = (pos, room_cn, original)
+    for original, dt in _EXPLICIT_TYPE_KEYWORDS:
+        pos = raw_text.find(original)
+        if pos >= 0 and (type_hit is None or pos < type_hit[0]):
+            type_hit = (pos, dt, original)
+    if room_hit and type_hit and room_hit[1]:  # room_cn 不为空
+        return room_hit[1], room_hit[2], type_hit[1], type_hit[2]
+    return None
+
+
+def _device_exists_with_room_and_type(room_cn: str, dev_type: str) -> bool:
+    """检查 DEVICE_STATES 中是否存在 room=room_cn 且 type=dev_type 的设备"""
+    for dev in DEVICE_STATES.values():
+        if dev.get("room") == room_cn and dev.get("type") == dev_type:
+            return True
+    return False
 
 
 def _resolve_device_id(intent: Dict[str, Any]) -> str:
@@ -207,6 +359,59 @@ async def apply_mqtt_state_update(device_id: str, new_state: Dict[str, Any]) -> 
         return True
 
 
+_CN_NUM_TABLE = {
+    "零": 0, "〇": 0, "一": 1, "二": 2, "两": 2, "三": 3, "四": 4,
+    "五": 5, "六": 6, "七": 7, "八": 8, "九": 9, "十": 10, "百": 100,
+}
+
+def _parse_chinese_number(text: str) -> Optional[int]:
+    """极简中文数字解析：只覆盖 1~100 范围内空调温度常用组合（二十四=24 / 十八=18 / 一百=100）。"""
+    s = text.strip()
+    if not s:
+        return None
+    # 纯阿拉伯（保险兜底）
+    if s.isdigit():
+        return int(s)
+    total = 0
+    current = 0
+    # 处理"二十四"这种十位数：二 + 十 + 四 → 2*10 + 4
+    for ch in s:
+        if ch not in _CN_NUM_TABLE:
+            return None
+        v = _CN_NUM_TABLE[ch]
+        if v == 10:
+            # 十：前面有数字（一~九）则乘，否则默认 10
+            current = 1 if current == 0 else current
+            total += current * 10
+            current = 0
+        elif v == 100:
+            current = 1 if current == 0 else current
+            total += current * 100
+            current = 0
+        else:
+            current = v
+    total += current
+    return total if total > 0 else None
+
+
+def _extract_any_temperature_degree(text: str) -> Optional[int]:
+    """
+    从任意文本中提取"X度/℃/°C/°"的温度值，X 同时支持阿拉伯数字和中文数字。
+    返回 None 表示未找到。只取匹配到的第一个温度值。
+    """
+    if not text:
+        return None
+    # 1) 阿拉伯数字优先（最快命中 50/5/24）
+    m = re.search(r'(\d+)\s*(?:度|℃|°C|°)', text)
+    if m:
+        return int(m.group(1))
+    # 2) 中文数字："(一到十的组合)度"
+    m2 = re.search(r'([零〇一二两三四五六七八九十百]+)\s*(?:度|℃|°C|°)', text)
+    if m2:
+        return _parse_chinese_number(m2.group(1))
+    return None
+
+
 async def _execute_ac(state: Dict[str, Any], display: str, action: str,
                       value: Any, value_type: str, attrs: Dict[str, Any],
                       dev_id: str,
@@ -326,39 +531,118 @@ async def _execute_ac(state: Dict[str, Any], display: str, action: str,
             "state_snapshot": state.copy(),
         }
 
-    # 开关控制
+    # ================================================================
+    # 【★ attrs.temperature 兼容层】：在 _execute_command_impl 层已经处理了
+    #   顶层字段 / raw_text 中文数字，这里做最后一道 attrs.temperature → value/value_type
+    #   的同步，保证 100% 进入 clamp 分支。
+    # ================================================================
+    if (value is None or value_type != "temperature") and isinstance(attrs, dict):
+        attr_temp = attrs.get("temperature")
+        if attr_temp is not None:
+            candidate = None
+            if isinstance(attr_temp, (int, float)):
+                candidate = int(attr_temp)
+            elif isinstance(attr_temp, str) and attr_temp.strip().isdigit():
+                candidate = int(attr_temp.strip())
+            if candidate is not None:
+                value, value_type = candidate, "temperature"
+                try:
+                    attrs.pop("temperature", None)
+                except Exception:
+                    pass
+                print(f"[_execute_ac][{dev_id}] attrs.temperature 兼容成功 → {candidate}°")
+
+    # ================================================================
+    # 解耦开关幂等 与 属性调节（需求 2）：
+    #   引入 power_idempotent 前缀：当 action=="on" 但设备已开时，仅记录这个
+    #   状态，不做短路 return；让后续温度/模式/风力照常处理。
+    #   值为 None / "already_on" / "turned_on" / "turned_off"
+    # ================================================================
+    power_note: Optional[str] = None   # None / "already_on" / "turned_on" / "turned_off"
+
+    # ---------- 开关控制（严格按：有属性时不短路 return） ----------
     if action == "on":
-        if state.get("power") == "on" and not value_type and not attrs:
-            return {
-                "success": True, "code": 200,
-                "message": f"{display}已经开着了",
-                "resolved_device_id": dev_id,
-                "state_snapshot": state.copy(),
-            }
-        state["power"] = "on"
-        changes.append("已开启")
+        if state.get("power") == "on":
+            if not value_type and not attrs:
+                # 纯开启，无任何属性 → 幂等提示直接返回
+                return {
+                    "success": True, "code": 200,
+                    "message": f"{display}已经是开启状态了。",
+                    "resolved_device_id": dev_id,
+                    "state_snapshot": state.copy(),
+                }
+            # 有属性调节 → 记录"已处于开启状态"前缀，继续执行属性更新，不 return
+            power_note = "already_on"
+        else:
+            state["power"] = "on"
+            power_note = "turned_on"
     elif action == "off":
         if state.get("power") == "off" and not value_type and not attrs:
             return {
                 "success": True, "code": 200,
-                "message": f"{display}已经关了",
+                "message": f"{display}已经是关闭状态了哦。",
                 "resolved_device_id": dev_id,
                 "state_snapshot": state.copy(),
             }
         state["power"] = "off"
-        changes.append("已关闭")
+        power_note = "turned_off"
 
-    # 温度
+    # ================================================================
+    # 温度处理（需求 1：严格按文案格式 + clamp 后必须说明原因和实际设定值）
+    # ================================================================
+    temp_clamped_full_msg = None
+    temp_normal_change = None   # 非越界时，保存"温度调至 24 度"这种短语
+    TEMP_LO, TEMP_HI = 16, 30
+
     if value_type == "temperature" and value is not None:
-        if not (16 <= value <= 30):
-            return {
-                "success": False, "code": 400,
-                "message": "温度需在 16-30 度之间",
-                "resolved_device_id": dev_id,
-                "state_snapshot": state.copy(),
-            }
+        clamped_reason = None  # "high" / "low" / None
+        raw_value_before_clamp = value  # 保留原始值用于日志
+        if value > TEMP_HI:
+            clamped_reason = "high"
+            value = TEMP_HI
+        elif value < TEMP_LO:
+            clamped_reason = "low"
+            value = TEMP_LO
+        print(f"[_execute_ac][{dev_id}] 温度 clamp → 原始值={raw_value_before_clamp}, 限制后={value}, 越界类型={clamped_reason!r}, 当前电源状态={state.get('power')}")
+
+        auto_turned_on = False
+        if state.get("power") != "on":
+            state["power"] = "on"
+            state["mode"] = state.get("mode") or "cooling"
+            auto_turned_on = True
+            # 如果之前没记过 power_note（action 是 set 而不是 on），补一下
+            if power_note is None:
+                power_note = "turned_on"
         state["temperature"] = value
-        changes.append(f"温度调至 {value} 度")
+
+        # ---- 严格按需求 1 格式输出越界提示 ----
+        if clamped_reason == "high":
+            # 格式："空调温度范围为 16-30 度，已为您将客厅空调调至最高 30 度。"
+            if auto_turned_on:
+                temp_clamped_full_msg = (
+                    f"空调温度范围为 {TEMP_LO}-{TEMP_HI} 度，"
+                    f"已为您开启{display}并调至最高 {TEMP_HI} 度。"
+                )
+            else:
+                temp_clamped_full_msg = (
+                    f"空调温度范围为 {TEMP_LO}-{TEMP_HI} 度，"
+                    f"已为您将{display}调至最高 {TEMP_HI} 度。"
+                )
+        elif clamped_reason == "low":
+            if auto_turned_on:
+                temp_clamped_full_msg = (
+                    f"空调温度范围为 {TEMP_LO}-{TEMP_HI} 度，"
+                    f"已为您开启{display}并调至最低 {TEMP_LO} 度。"
+                )
+            else:
+                temp_clamped_full_msg = (
+                    f"空调温度范围为 {TEMP_LO}-{TEMP_HI} 度，"
+                    f"已为您将{display}调至最低 {TEMP_LO} 度。"
+                )
+        else:
+            # 正常范围：明确说明"温度调至 X 度"，绝不只说"已设置空调"
+            temp_normal_change = f"温度调至 {value} 度"
+            changes.append(temp_normal_change)
 
     # 属性值规范化映射（统一转换为前端能识别的标准格式）
     _fan_norm = {
@@ -376,13 +660,14 @@ async def _execute_ac(state: Dict[str, Any], display: str, action: str,
         "自动风": "auto", "自动档": "auto",
     }
 
-    # 模式
+    # 模式（注意：AC_MODE_NAMES 的 value 已自带"模式"结尾，如 cooling→"制冷模式"）
     mode = attrs.get("mode")
     if mode:
         normalized_mode = AC_MODE_NORM.get(mode, mode)
         state["mode"] = normalized_mode
         mode_cn = AC_MODE_NAMES.get(normalized_mode, mode)
-        changes.append(f"切换为{mode_cn}模式")
+        # 统一前缀"切换为XX模式"，语义更自然、不重复
+        changes.append(f"切换为{mode_cn}")
 
     # 扫风
     swing = attrs.get("swing")
@@ -395,7 +680,6 @@ async def _execute_ac(state: Dict[str, Any], display: str, action: str,
     # 风力
     fan_speed = attrs.get("fan_speed")
     if fan_speed is not None:
-        # 支持相对调整：如 "+1"、"-1档"、"调大两档"
         current_fan = state.get("fan_speed")
         if fan_speed in _fan_norm:
             normalized_fan = _fan_norm[fan_speed]
@@ -415,9 +699,9 @@ async def _execute_ac(state: Dict[str, Any], display: str, action: str,
                 return 1
             m = re.match(r'^\s*([+-])\s*(\d+)\s*(档|挡)?\s*$', s)
             if m and isinstance(current_fan, int):
-                delta = int(m.group(2)) * (1 if m.group(1) == '+' else -1)
+                _d = int(m.group(2)) * (1 if m.group(1) == '+' else -1)
                 base = current_fan if isinstance(current_fan, int) else 2
-                normalized_fan = max(1, min(5, base + delta))
+                normalized_fan = max(1, min(5, base + _d))
             elif any(re.search(p, s) for p in [r'调大', r'调高', r'加大', r'增强', r'大一档', r'大.*档', r'升.*档']) and isinstance(current_fan, int):
                 d = _extract_delta(s)
                 normalized_fan = max(1, min(5, current_fan + d))
@@ -430,36 +714,86 @@ async def _execute_ac(state: Dict[str, Any], display: str, action: str,
                 normalized_fan = _fan_norm.get(fan_speed, fan_speed)
         state["fan_speed"] = normalized_fan
         fan_cn = AC_FAN_NAMES.get(normalized_fan, str(normalized_fan) if isinstance(normalized_fan, int) else str(normalized_fan))
-        changes.append(f"风力设为{fan_cn}")
+        changes.append(f"风速调至{fan_cn}")
 
-    # 如果有任何属性变更或开关操作
-    if changes:
-        # 打开空调时默认设为制冷模式
-        if action == "on" and "mode" not in attrs:
-            state["mode"] = state.get("mode", "cooling")
-        # 只要有属性变更或开启操作，都视为成功
-        if action != "on" and action != "off" and state.get("power") != "on":
-            state["power"] = "on"
+    # 默认模式（on 且未显式指定 mode 时补 cooling）
+    if action == "on" and "mode" not in (attrs or {}) and power_note in ("turned_on", "already_on"):
+        state["mode"] = state.get("mode", "cooling")
 
-        # 分离开关操作和属性变更
-        power_change = None
-        other_changes = []
-        for c in changes:
-            if c in ("已开启", "已关闭"):
-                power_change = c
+    # 只要 action 是 set 或 属性调节，确保电源是开的
+    if action != "on" and action != "off" and state.get("power") != "on":
+        state["power"] = "on"
+        if power_note is None:
+            power_note = "turned_on"
+
+    # ================================================================
+    # 回复文案组装（重点：已开+有属性 → 用"已处于开启状态，已为您..."）
+    # ================================================================
+    has_any_change = bool(changes) or temp_clamped_full_msg is not None or power_note is not None
+
+    if not has_any_change:
+        # 连状态 + 属性 + 开关 都没碰（理论上只会在 action=set 但啥都没传时触发）
+        # → 按 intent+display 动态拼精准文案，绝不返回空 message 触发外层兜底
+        safe_msg = _build_confirmation(
+            {"device_id": dev_id, "device_name": display, "action": action,
+             "value": value, "value_type": value_type},
+            fallback_reason="AC has_any_change=False",
+        )
+        print(f"[_execute_ac][{dev_id}] 最终回复(无变更分支) → {safe_msg!r}")
+        return {
+            "success": True, "code": 200,
+            "message": safe_msg,
+            "resolved_device_id": dev_id,
+            "state_snapshot": state.copy(),
+        }
+    else:
+        # ---- 温度越界句式优先（已有完整主谓宾，其它属性追加其后） ----
+        if temp_clamped_full_msg is not None:
+            other_adjusts = [c for c in changes if c != temp_normal_change]
+            if other_adjusts:
+                msg = temp_clamped_full_msg.rstrip("。！？.!?") + "，" + "，".join(other_adjusts) + "。"
             else:
-                other_changes.append(c)
+                msg = temp_clamped_full_msg
+            print(f"[_execute_ac][{dev_id}] 最终回复(越界分支) → {msg!r}")
+            return {
+                "success": True, "code": 200,
+                "message": msg,
+                "resolved_device_id": dev_id,
+                "state_snapshot": state.copy(),
+            }
 
-        if power_change:
-            prefix = "开启" if power_change == "已开启" else "关闭"
-            msg = f"已为您{prefix}{display}"
-            if other_changes:
-                msg += "，" + "，".join(other_changes)
+        # ---- 正常情况：按 power_note + 属性 组合文案 ----
+        # 先区分出"温度/模式/风速"等属性变更（changes 现在不会包含"已开启/已关闭"了）
+        attr_changes = list(changes)
+
+        if power_note == "already_on":
+            # 【需求 2 文案】设备已开，仅对属性做确认
+            if attr_changes:
+                attr_text = "，".join(attr_changes)
+                msg = f"{display}已处于开启状态，已为您将{attr_text}。"
+            else:
+                msg = f"{display}已处于开启状态。"
+        elif power_note == "turned_on":
+            prefix = f"已为您开启{display}"
+            if attr_changes:
+                msg = prefix + "，" + "，".join(attr_changes) + "。"
+            else:
+                msg = prefix + "。"
+        elif power_note == "turned_off":
+            prefix = f"已为您关闭{display}"
+            if attr_changes:
+                msg = prefix + "，" + "，".join(attr_changes) + "。"
+            else:
+                msg = prefix + "。"
         else:
-            # 纯属性调整（无显式开关），使用"将"字句
-            change_text = "，".join(changes)
-            msg = f"已为您将{display}{change_text}"
+            # 纯属性变更（没有涉及开关）→ "已为您将卧室空调温度调至 24 度，模式切换为制冷。"
+            if attr_changes:
+                attr_text = "，".join(attr_changes)
+                msg = f"已为您将{display}{attr_text}。"
+            else:
+                msg = f"已为您将{display}设置好。"
 
+        print(f"[_execute_ac][{dev_id}] 最终回复(正常分支 power_note={power_note!r}) → {msg!r}")
         return {
             "success": True, "code": 200,
             "message": msg,
@@ -471,27 +805,46 @@ async def _execute_ac(state: Dict[str, Any], display: str, action: str,
     if action in ("increase", "decrease"):
         step = 1 if action == "increase" else -1
         cur = state.get("temperature", 26)
-        state["temperature"] = max(16, min(30, cur + step))
+        state["temperature"] = max(TEMP_LO, min(TEMP_HI, cur + step))
         state["power"] = "on"
+        msg = f"已将{display}温度{'升高' if step > 0 else '降低'}至 {state['temperature']} 度。"
+        print(f"[_execute_ac][{dev_id}] 最终回复(增减分支) → {msg!r}")
         return {
             "success": True, "code": 200,
-            "message": f"已将{display}温度{'升高' if step > 0 else '降低'}至 {state['temperature']} 度",
+            "message": msg,
             "resolved_device_id": dev_id,
             "state_snapshot": state.copy(),
         }
 
-    # 空调 set 动作
+    # 空调 set 动作兜底：【删除原来的空话，改为动态读 state 播报关键属性值】
     if action == "set":
+        # 从当前 state 读取有意义的字段，避免"已设置好"这种空泛回复
+        _parts = []
+        if isinstance(state.get("temperature"), (int, float)):
+            _parts.append(f"温度为 {state['temperature']} 度")
+        if state.get("mode"):
+            _parts.append(f"模式为{AC_MODE_NAMES.get(state['mode'], state['mode'])}")
+        fan_raw = state.get("fan_speed")
+        if fan_raw is not None:
+            fan_cn = AC_FAN_NAMES.get(fan_raw, (str(fan_raw) + "档") if isinstance(fan_raw, int) else str(fan_raw))
+            _parts.append(f"风速为{fan_cn}")
+        if _parts:
+            msg = f"已为您将{display}设置为：" + "，".join(_parts) + "。"
+        else:
+            msg = f"已为您将{display}设置好。"
+        print(f"[_execute_ac][{dev_id}] 最终回复(set 兜底分支) → {msg!r}")
         return {
             "success": True, "code": 200,
-            "message": f"已将{display}设置好",
+            "message": msg,
             "resolved_device_id": dev_id,
             "state_snapshot": state.copy(),
         }
 
+    msg_500 = f"抱歉，暂时无法理解对{display}的操作"
+    print(f"[_execute_ac][{dev_id}] 最终回复(500 兜底) → {msg_500!r}")
     return {
         "success": False, "code": 500,
-        "message": f"抱歉，暂时无法理解对{display}的操作",
+        "message": msg_500,
         "resolved_device_id": dev_id,
         "state_snapshot": state.copy(),
     }
@@ -515,7 +868,7 @@ async def _execute_tv(state: Dict[str, Any], display: str, action: str,
         if state.get("power") == "on":
             return {
                 "success": True, "code": 200,
-                "message": f"{display}已经开着了",
+                "message": f"{display}已经是开启状态了。",
                 "resolved_device_id": dev_id,
                 "state_snapshot": state.copy(),
             }
@@ -530,7 +883,7 @@ async def _execute_tv(state: Dict[str, Any], display: str, action: str,
         if state.get("power") == "off":
             return {
                 "success": True, "code": 200,
-                "message": f"{display}已经关了",
+                "message": f"{display}已经是关闭状态了哦。",
                 "resolved_device_id": dev_id,
                 "state_snapshot": state.copy(),
             }
@@ -593,35 +946,55 @@ async def _publish_changed_mqtt(
         if not room or not dtype:
             continue
         extra: Dict[str, Any] = {}
-        if value is not None and value != "":
-            extra["temperature"] = value
-        if fan_mode_val and fan_mode_val != "":
-            extra["fan_mode"] = fan_mode_val
-            extra["fan_speed"] = fan_mode_val
-        if hvac_mode:
-            extra["mode"] = hvac_mode
-        if swing_mode_val and swing_mode_val != "":
-            extra["swing_mode"] = swing_mode_val
         async with state_lock:
             s = _c.deepcopy(DEVICE_STATES.get(dev_id, {}))
+
+        # ================================================================
+        # 【★ 关键修复】MQTT payload 的属性值，必须以 clamp 后的 DEVICE_STATES 为准！
+        #   旧逻辑：if intent.value 非空 → 用 intent.value（原始 5/50 未 clamp，导致越界下发）
+        #   新逻辑：先填 intent.attrs 中那些 state 没覆盖的（非空调普通参数），
+        #          然后对 AC 用 state 值 100% 覆盖 temperature/mode/fan_speed/swing_mode。
+        # ================================================================
+
+        # 非 AC 场景：允许用 intent.value / intent.attrs（但仍优先 state 里的明确值）
+        if s.get("type") != "ac":
+            if value is not None and value != "":
+                extra["temperature"] = value
+            if fan_mode_val and fan_mode_val != "":
+                extra["fan_mode"] = fan_mode_val
+                extra["fan_speed"] = fan_mode_val
+            if hvac_mode:
+                extra["mode"] = hvac_mode
+            if swing_mode_val and swing_mode_val != "":
+                extra["swing_mode"] = swing_mode_val
+        # 空调场景：先填 intent.attrs 中 non-control 属性（如 fan_mode 同义名兼容），
+        #           然后强制用 state 值覆盖 temperature/mode/fan_speed/swing_mode。
+        else:
+            # 兼容 fan_mode/fan_speed/swing_mode/swing 同义名命名差异的透传（值仍以 state 为准）
+            if fan_mode_val and fan_mode_val != "":
+                extra["fan_mode"] = fan_mode_val
+            if swing_mode_val and swing_mode_val != "":
+                pass  # 下面用 state["swing"] 统一覆盖
+            # ★ 一律以 clamp / 属性合并后的 state 为最终下发值
+            t = s.get("temperature")
+            if t is not None:
+                extra["temperature"] = t
+            m = s.get("mode")
+            if m:
+                extra["mode"] = m
+            fs = s.get("fan_speed")
+            if fs is not None:
+                extra["fan_speed"] = fs
+                extra["fan_mode"] = fs  # 保持与旧协议双字段兼容
+            sw = s.get("swing") or swing_mode_val
+            if sw:
+                extra["swing_mode"] = sw
+
+        # 电源/窗帘状态（保持原逻辑）
         if s.get("type") == "curtain":
             extra["power"] = s.get("state", "closed")
         else:
             extra["power"] = s.get("power", "off")
-        if s.get("type") == "ac":
-            if "temperature" not in extra:
-                t = s.get("temperature")
-                if t is not None:
-                    extra["temperature"] = t
-            m = s.get("mode")
-            if m and "mode" not in extra:
-                extra["mode"] = m
-            fs = s.get("fan_speed")
-            if fs is not None and "fan_mode" not in extra and "fan_speed" not in extra:
-                extra["fan_speed"] = fs
-            sw = s.get("swing")
-            if sw and "swing_mode" not in extra:
-                extra["swing_mode"] = sw
         mqtt.publish_command(
             device_id=dev_id,
             room=room,
@@ -637,13 +1010,37 @@ async def execute_command(intent: Dict[str, Any]) -> Dict[str, Any]:
     1) 保存 DEVICE_STATES 快照
     2) 调用 _execute_command_impl（修改 DEVICE_STATES）
     3) diff 变化的设备，逐个 publish MQTT
+
+    特殊短路：隐式意图的"虚拟设备"（如无开启媒体设备核查）不涉及 DEVICE_STATES 修改，
+    也不会 publish MQTT，直接在 impl 层返回友好提示。
     """
+    # ---------- 隐式虚拟意图：不碰状态，不发 MQTT ----------
+    if intent.get("no_running_media"):
+        return await _execute_command_impl(intent)
+
     import copy as _copy
     async with state_lock:
         before_snap = {k: _copy.deepcopy(v) for k, v in DEVICE_STATES.items()}
     result = await _execute_command_impl(intent)
     if result.get("success", False):
-        await _publish_changed_mqtt(before_snap, intent)
+        try:
+            await _publish_changed_mqtt(before_snap, intent)
+        except Exception as _mqtt_e:
+            # MQTT 失败不吞掉"操作已成功"的文案，但要日志打出来
+            print(f"[MQTT] publish 失败（不影响用户回复文案）: {_mqtt_e}")
+
+    # —— ★ execute_command 最终出口：message 强制非空（【需求 3】：正常 turn_off/set_temperature 分支必须有精确文案，"操作已完成"只能最后兜底）——
+    msg = result.get("message") if isinstance(result, dict) else None
+    if not isinstance(msg, str) or not msg.strip():
+        # 先根据 intent.device_id + action 拼出 "已为您关闭客厅空调。"/"已为您开启…"/"已为您设置好…"
+        safe_msg = _build_confirmation(intent, fallback_reason=f"impl 返回 message={msg!r}")
+        if not safe_msg or not safe_msg.strip():
+            safe_msg = "操作已完成。"
+        if isinstance(result, dict):
+            result["message"] = safe_msg
+        else:
+            result = {"success": True, "code": 200, "message": safe_msg}
+        print(f"[Reply-Safe] execute_command: impl 返回 message 为空 → 按 intent 拼装确认文案 → {safe_msg!r}")
     return result
 
 
@@ -675,13 +1072,89 @@ async def _execute_command_impl(intent: Dict[str, Any]) -> Dict[str, Any]:
         }
     """
     dev_id = _resolve_device_id(intent)
-    dev_name = intent["device_name"]
-    action = intent["action"]
+    # intent.device_name 不是必传：缺的时候按 intent.device_id/DEVICE_STATES 反推中文显示名
+    dev_name = intent.get("device_name")
+    if not dev_name:
+        if dev_id and dev_id in DEVICE_STATES:
+            st = DEVICE_STATES[dev_id]
+            room_cn = st.get("room") or ""
+            type_cn = DEVICE_TYPE_NAMES.get(st.get("type") or "", "")
+            if room_cn and type_cn:
+                dev_name = room_cn + type_cn
+        if not dev_name and dev_id:
+            # 从 device_id 拆 bedroom_ac → 卧室空调
+            parts = dev_id.replace(".all", "").split("_")
+            if parts:
+                slug = parts[0]
+                type_short = "_".join(parts[1:]) if len(parts) > 1 else ""
+                room_cn = ROOM_SLUG_TO_CN.get(slug, slug)
+                type_cn = DEVICE_TYPE_NAMES.get(type_short, type_short)
+                if room_cn and type_cn:
+                    dev_name = room_cn + type_cn
+                elif type_cn:
+                    dev_name = type_cn
+                else:
+                    dev_name = dev_id
+            else:
+                dev_name = dev_id
+        if not dev_name:
+            dev_name = "设备"
+    action = intent.get("action") or ""
     value = intent.get("value")
     value_type = intent.get("value_type")
     attrs = intent.get("attrs") or {}
     control_mode = intent.get("control_mode", "absolute")
     delta = intent.get("delta")
+
+    # ============ 【★ 动作别名归一化（最前置！）】 ============
+    #   必须在 AC/Light/TV 等任何类型分支之前做，确保所有分支看到的 action = on/off/set/...
+    #   否则 Light 分支（780行）因 action="turn_off" 不匹配而返回 500 错误。
+    if action == "turn_on":
+        action = "on"
+    elif action == "turn_off":
+        action = "off"
+    elif action in ("set_fan_mode", "set_hvac_mode", "set_swing_mode", "set_temperature", "set_value", "set_ac", "adjust", "adjust_ac"):
+        action = "set"
+    elif action == "open_curtain":
+        action = "on"
+    elif action == "close_curtain":
+        action = "off"
+
+    # ============ 【★ 显式房间+设备 存在性拦截（禁止模糊回退）】 ============
+    #   核心 Bug：用户说"打开书房灯"时，_match_device 先匹配到泛化"灯"→ light，
+    #           resolve_device_id 默认回退 bedroom → 被误识别成"卧室灯已开"。
+    #   修复原则：显式提到"XX房/厅 + 设备"组合的，若系统中无该房间的对应类型设备，
+    #           直接返回"未找到XX设备"，绝不再回退到其他房间。
+    if not dev_id.endswith(".all"):
+        raw_text = intent.get("raw_text") or intent.get("original_text") or ""
+        explicit = _extract_explicit_room_and_type(raw_text)
+        if explicit:
+            r_cn, r_orig, d_type, t_orig = explicit
+            if not _device_exists_with_room_and_type(r_cn, d_type):
+                friendly_display = f"{r_cn}{t_orig}"
+                return {
+                    "success": False,
+                    "code": 404,
+                    "message": f"未找到{friendly_display}，请检查设备名称。",
+                    "resolved_device_id": dev_id,
+                    "state_snapshot": {},
+                }
+
+    # ---- 隐式意图：噪音感知但"没有正在播放的媒体设备" ----
+    # （在 .all 扩展与 DEVICE_STATES 查找之前拦截，避免报 "找不到设备"）
+    if intent.get("no_running_media"):
+        target_room = intent.get("no_running_room") or ""
+        if target_room:
+            message = f"已为您核查，当前{target_room}没有播放设备"
+        else:
+            message = "已为您核查，当前房间没有播放设备"
+        return {
+            "success": True,
+            "code": 200,
+            "message": message,
+            "resolved_device_id": dev_id,
+            "state_snapshot": {},
+        }
 
     # ---- 多设备扩展：curtain.all / light.all 等泛指目标 ----
     if dev_id.endswith(".all"):
@@ -737,6 +1210,40 @@ async def _execute_command_impl(intent: Dict[str, Any]) -> Dict[str, Any]:
             "state_snapshot": {},
         }
 
+    # ================================================================
+    # 【★ 调用设备特定函数前 → 统一 INTENT 预处理（解决中文数字温度 / 顶层字段布局不一致）】
+    #   - 补全 value / value_type（从 raw_text 提取中文数字温度、从 intent 顶层
+    #     temperature/mode/fan_speed 同步到 attrs/value 等标准字段）
+    #   - 对 ac 类型 100% 走 PRINT 诊断日志（DEBUG 开关在 _execute_ac）
+    # ================================================================
+    if dev_id in DEVICE_STATES and DEVICE_STATES[dev_id]["type"] == "ac":
+        # (A) intent 顶层 temperature / mode / fan_speed / swing_mode → 同步到标准字段
+        t_top = intent.get("temperature")
+        if t_top is not None and (value is None or value_type != "temperature"):
+            if isinstance(t_top, (int, float)) or (isinstance(t_top, str) and str(t_top).strip().isdigit()):
+                value = int(t_top) if isinstance(t_top, (int, float)) else int(str(t_top).strip())
+                value_type = "temperature"
+        for src_key, dst_key in (("mode", "mode"), ("fan_mode", "fan_speed"),
+                                 ("fan_speed", "fan_speed"), ("swing_mode", "swing"),
+                                 ("swing", "swing")):
+            v = intent.get(src_key)
+            if v is not None:
+                if not isinstance(attrs, dict):
+                    attrs = {}
+                attrs.setdefault(dst_key, v)
+
+        # (B) raw_text 终极防线：中文数字温度提取（解决"二十四度"→24 丢失）
+        if value is None or value_type != "temperature":
+            raw = (intent.get("raw_text") or intent.get("original_text") or "").strip()
+            if raw:
+                cn_temp = _extract_any_temperature_degree(raw)
+                if cn_temp is not None:
+                    value, value_type = cn_temp, "temperature"
+                    print(f"[AC-Preprocess][{dev_id}] ★ raw_text 兜底提取温度成功: '{raw}' → {value}°")
+
+        # (C) PRINT 预处理后最终传入 _execute_ac 的参数（便于用户日志里一眼看穿）
+        print(f"[AC-Preprocess][{dev_id}] 最终下发 → action={action!r} | value={value!r} | value_type={value_type!r} | attrs={attrs!r}")
+
     async with state_lock:
         state = DEVICE_STATES[dev_id]
         dev_type = state["type"]
@@ -758,7 +1265,7 @@ async def _execute_command_impl(intent: Dict[str, Any]) -> Dict[str, Any]:
                 if state.get("power") == "on":
                     return {
                         "success": True, "code": 200,
-                        "message": f"{display}已经开着了",
+                        "message": f"{display}已经是开启状态了。",
                         "resolved_device_id": dev_id,
                         "state_snapshot": state.copy(),
                     }
@@ -773,7 +1280,7 @@ async def _execute_command_impl(intent: Dict[str, Any]) -> Dict[str, Any]:
                 if state.get("power") == "off":
                     return {
                         "success": True, "code": 200,
-                        "message": f"{display}已经关了",
+                        "message": f"{display}已经是关闭状态了哦。",
                         "resolved_device_id": dev_id,
                         "state_snapshot": state.copy(),
                     }
@@ -830,7 +1337,7 @@ async def _execute_command_impl(intent: Dict[str, Any]) -> Dict[str, Any]:
                 if state.get("state") == "open":
                     return {
                         "success": True, "code": 200,
-                        "message": f"{display}已经拉开了",
+                        "message": f"{display}已经是拉开状态了。",
                         "resolved_device_id": dev_id,
                         "state_snapshot": state.copy(),
                     }
@@ -845,7 +1352,7 @@ async def _execute_command_impl(intent: Dict[str, Any]) -> Dict[str, Any]:
                 if state.get("state") == "closed":
                     return {
                         "success": True, "code": 200,
-                        "message": f"{display}已经关闭了",
+                        "message": f"{display}已经是关闭状态了哦。",
                         "resolved_device_id": dev_id,
                         "state_snapshot": state.copy(),
                     }
@@ -866,11 +1373,17 @@ async def _execute_command_impl(intent: Dict[str, Any]) -> Dict[str, Any]:
 
         # ============ 5. 通用开关（AC / Light / TV）============
 
+        # 别名归一化（兼容 turn_on / turn_off，避免不同模块传 action 名不一致）
+        if action == "turn_on":
+            action = "on"
+        elif action == "turn_off":
+            action = "off"
+
         if action == "on":
             if state.get("power") == "on":
                 return {
                     "success": True, "code": 200,
-                    "message": f"{display}已经开着了",
+                    "message": f"{display}已经是开启状态了。",
                     "resolved_device_id": dev_id,
                     "state_snapshot": state.copy(),
                 }
@@ -886,7 +1399,7 @@ async def _execute_command_impl(intent: Dict[str, Any]) -> Dict[str, Any]:
             if state.get("power") == "off":
                 return {
                     "success": True, "code": 200,
-                    "message": f"{display}已经关了",
+                    "message": f"{display}已经是关闭状态了哦。",
                     "resolved_device_id": dev_id,
                     "state_snapshot": state.copy(),
                 }

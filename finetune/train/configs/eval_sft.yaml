@@ -1,0 +1,35 @@
+# 评估：用训练好的 LoRA adapter 在 nlu_eval.jsonl 上做 MMLU 风格的 Causal LM PP/生成指标
+# 业务真实指标请用 ../eval/eval_nlu.py（JSON Parse Rate / Intent Acc / Slot F1）
+# 运行：
+#   llamafactory-cli train finetune/train/configs/eval_sft.yaml
+# =================================================================
+
+model_name_or_path: "Qwen/Qwen2.5-1.5B-Instruct"
+adapter_name_or_path: "../train/saves/qwen2.5-1.5b-nlu-lora"
+template: qwen
+finetuning_type: lora
+stage: sft
+
+# ---- 数据 ----
+dataset_dir: ".."
+dataset: "nlu_eval"
+# 同训练：system prompt 大，cutoff 给 2048 避免截断
+cutoff_len: 2048
+max_samples: 150
+overwrite_cache: false
+
+# ---- 评估用 QLoRA 对齐训练 ----
+quantization_bit: 4
+quantization_type: nf4
+double_quantization: true
+
+# ---- 输出 ----
+output_dir: "../train/saves/eval_tmp"
+per_device_eval_batch_size: 4
+predict_with_generate: true
+max_new_tokens: 384
+temperature: 0.0
+top_p: 1.0
+
+seed: 42
+report_to: none

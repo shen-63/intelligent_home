@@ -1,0 +1,6078 @@
+[
+  {
+    "input": "我说啊，客厅空调再低一度",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "请娃要洗澡，卧室空调开个25度",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": 25,
+      "value_type": "temperature",
+      "attrs": {
+        "temperature": 25,
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "嗯，卧室空调再高一点可以吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "increase",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "麻烦卧室有点闷开个空调呗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "请我走了把我室灯关一下",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "能不卧室太阳太大了把窗帘拉上撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说帮我克厅那个卧试风格的空条关毕下行不行哦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "那个，克厅那个卧试风格的空条关毕下好不好",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "能不卧试的窗连关毕哈",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "请吃饭了客厅开亮一点可以吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "set",
+      "value": 100,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 100
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "那个，卧试的窗连关毕哈好不好",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "帮我客听的灯大开一下嘛啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词+方言"
+    }
+  },
+  {
+    "input": "麻烦娃要洗澡，卧室空调开个28度吧",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": 28,
+      "value_type": "temperature",
+      "attrs": {
+        "temperature": 28,
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "我说你能不能客厅有点闷开个空调哦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "能不吃饭了客厅开亮一点",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "set",
+      "value": 100,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 100
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "能不能可听有点冷好吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说帮我客厅空调再高一点行不行",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "increase",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "唉，克厅那个卧试风格的空条关毕下吧",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "卧世的电世关一下感谢",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_tv",
+      "device_name": "卧室电视",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "客听的灯大开一下嘛谢谢",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词+方言"
+    }
+  },
+  {
+    "input": "卧室太冷了行不",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "你给卧室有点闷开个空调可以吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "能不能吃饭了客厅开亮一点辛苦啦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "set",
+      "value": 100,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 100
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "那个，吃饭了客厅开亮一点咯",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "set",
+      "value": 100,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 100
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "我说啊，要睡觉了卧世灯调暗点嘛",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "set",
+      "value": 30,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 30
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "帮我客厅有点冷好吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说你能不能看电视了把卧室灯暗一点",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "set",
+      "value": 30,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 30
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "我说帮我克厅窗连拉成半开撒哦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "半开",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "半开"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词+方言"
+    }
+  },
+  {
+    "input": "能不能卧室太阳太大了把窗帘拉上吧",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "克厅窗连拉成半开撒哦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "半开",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "半开"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词+方言"
+    }
+  },
+  {
+    "input": "请卧室空调再低一度",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "你给我客厅太热了",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说啊，卧室有点热啊哈",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "刻厅有点闷开个空调",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说帮我卧世的电世关一下好不好",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_tv",
+      "device_name": "卧室电视",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "我说帮我客厅空调再低一度行吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说帮我卧室太冷了撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "麻烦你要睡觉了把卧世灯关掉啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "克厅好刺眼把窗连拉一下谢谢啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "吃饭了客厅开亮一点哦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "set",
+      "value": 100,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 100
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "请你要睡觉了卧试灯调暗点辛苦啦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "set",
+      "value": 30,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 30
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "我说啊，要睡觉了客厅灯调暗点吧",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "set",
+      "value": 30,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 30
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "客厅太热了哦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我妈嫌热，客厅空调再凉一点嘛",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "你给好刺眼，卧室那个空条能不能开下啦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "代词+错词"
+    }
+  },
+  {
+    "input": "客听的灯大开一下嘛啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词+方言"
+    }
+  },
+  {
+    "input": "我说帮我看电世了把客听灯暗一点撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "set",
+      "value": 30,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 30
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "请你客厅太热了好不好",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说你能不能可听空条再低一度可以吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "卧世的电世关一下好吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_tv",
+      "device_name": "卧室电视",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "客厅有点冷撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "麻烦你卧室太冷了呗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "卧室有点闷开个空调好不好",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "你给客厅太冷了撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "嗯，卧室太热了噻",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "客厅太亮了晃眼好吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "麻烦你看电视了把客厅灯暗一点辛苦啦好不好",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "set",
+      "value": 30,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 30
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "我说啊，卧室太冷了",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "麻烦卧试的窗连关毕",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "你看啊，卧试的窗连关毕吧啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "麻烦你客厅有点闷开个空调行吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "你给我克厅那个卧试风格的空条关毕下",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "帮我客厅空调再低一度啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "能不客厅好刺眼把窗连拉一下呗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说你能不能客厅有点暗嘛",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "麻烦你客厅好刺眼把窗连拉一下哈",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "你给卧室空调再高一点",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "increase",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "帮我客听的灯大开一下嘛",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词+方言"
+    }
+  },
+  {
+    "input": "卧试的窗连关毕",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "你给我卧试的窗连关毕",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "嗯，我室有点闷开个空调吧",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "帮我卧室太阳太大了把窗帘拉上",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "那个，卧试的窗连关毕哦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "请你客厅太亮了晃眼",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "你看啊，卧室太冷了",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "你给客厅有点暗行吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "能不客听的灯大开一下嘛谢谢",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词+方言"
+    }
+  },
+  {
+    "input": "你看啊，卧事好闷啊啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说，看电视了把课厅灯暗一点辛苦啦行不",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "set",
+      "value": 30,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 30
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "要睡觉了把卧室灯关掉咩",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "你看啊，可听空调再低一度吧",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "麻烦要睡觉了把卧室灯关掉",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "你给客听的灯大开一下嘛撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词+方言"
+    }
+  },
+  {
+    "input": "麻烦卧室好闷啊可以吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说帮我客厅太亮了晃眼哈",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "卧室空调再低一度吧",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "请我妈嫌热，克厅空凋再凉一点撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "请你卧室太冷了麻烦了",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我妈嫌热，客厅空调再凉一点可以吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说啊，卧室好闷啊可以吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "能不能客厅空调再低一度撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "你看啊，卧室太冷了撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说，客听的灯大开一下嘛哈",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词+方言"
+    }
+  },
+  {
+    "input": "能不能客厅有点热啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "吃饭了课厅开亮一点",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "set",
+      "value": 100,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 100
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "麻烦你卧试的窗连关毕吧",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "帮我卧试太黑了啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说你能不能卧室晃眼哈",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说你能不能客厅太黑了行吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "能不能吃饭了卧室开亮一点哦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "set",
+      "value": 100,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 100
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "我说帮我娃要洗澡，我是关调开个25度哈",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": 25,
+      "value_type": "temperature",
+      "attrs": {
+        "temperature": 25,
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "我说，看电视了把卧试灯暗一点行不行",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "set",
+      "value": 30,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 30
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "请你卧室太黑了嘛",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "卧室空调再高一点哦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "increase",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "你给我卧室太黑了啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "你给我客听的灯大开一下嘛撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词+方言"
+    }
+  },
+  {
+    "input": "我说能不能克厅那个卧试风格的空条关毕下麻烦了",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "好刺眼，客厅那个空条能不能开下",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "代词+错词"
+    }
+  },
+  {
+    "input": "我说能不能卧室空调再低一度哈",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说帮我客厅有点热啊哈",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "麻烦你好刺眼，客厅那个空条能不能开下撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "代词+错词"
+    }
+  },
+  {
+    "input": "那个，卧世的电世关一下嘛",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_tv",
+      "device_name": "卧室电视",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "帮我卧室好闷啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "能不能卧世的电世关一下",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_tv",
+      "device_name": "卧室电视",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "你看啊，卧试的窗连关毕嘛",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "能不能客厅有点冷哈",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "你看啊，客厅空调再低一度",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说啊，卧是太阳太大了把创联拉上啦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "那个，娃要洗澡，客听空调开个26度",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": 26,
+      "value_type": "temperature",
+      "attrs": {
+        "temperature": 26,
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "克厅窗连拉成半开撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "半开",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "半开"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词+方言"
+    }
+  },
+  {
+    "input": "请客厅有点闷开个空调咩",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "能不能卧室太阳太大了把窗帘拉上撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "能不克厅窗连拉成半开撒啊麻烦了",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "半开",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "半开"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词+方言"
+    }
+  },
+  {
+    "input": "我说，要睡觉了卧室灯调暗点行不行",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "set",
+      "value": 30,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 30
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "你给我卧事太冷了",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "唉，卧室太阳太大了把窗帘拉上好吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "那个，客厅有点冷咯",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "帮我卧试太阳太大了把窗帘拉上啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说能不能看电视了把客厅灯暗一点哈",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "set",
+      "value": 30,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 30
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "那个，克厅那个卧试风格的空条关毕下",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "卧室有点冷好不好麻烦了",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "嗯，好刺眼，卧试那个空条能不能开下哦麻烦了",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "代词+错词"
+    }
+  },
+  {
+    "input": "唉，我走了把客厅灯关一下可以吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "我说能不能吃饭了客厅开亮一点啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "set",
+      "value": 100,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 100
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "我说你能不能好刺眼，克听那个空条能不能开下麻烦了",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "代词+错词"
+    }
+  },
+  {
+    "input": "卧是太冷了咯",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "麻烦我走了把客厅灯关一下麻烦了",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "客厅有点暗辛苦啦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说，娃要洗澡，客厅空调开个26度",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": 26,
+      "value_type": "temperature",
+      "attrs": {
+        "temperature": 26,
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "给我客听的灯大开一下嘛哦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词+方言"
+    }
+  },
+  {
+    "input": "我说啊，卧室太黑了噻呗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "客厅好刺眼把窗连拉一下咩",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "请客厅太黑了辛苦啦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "帮我卧室有点暗好吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说你能不能客厅有点闷开个空跳撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说帮我客厅空调再低一度谢谢",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "能不能客厅有点热啊撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "客听有点暗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "麻烦客听的灯大开一下嘛行不",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词+方言"
+    }
+  },
+  {
+    "input": "看电视了把卧室灯暗一点吧",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "set",
+      "value": 30,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 30
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "你给我客厅太热了吧",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "那个，要睡觉了把卧室灯关掉哦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "你给客厅太黑了",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "你给我卧试太热了",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "你看啊，刻厅有点闷开个空调嘛",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "你给客厅有点闷开个空调啦一下",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "麻烦客厅太阳太大了把窗帘拉上吧",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "麻烦你看电视了把卧室灯暗一点咩",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "set",
+      "value": 30,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 30
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "能不能我妈嫌热，客厅空调再凉一点吧",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "麻烦好刺眼，客厅那个空条能不能开下行不",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "代词+错词"
+    }
+  },
+  {
+    "input": "客厅好刺眼把窗连拉一下啦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "卧室晃眼行吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "客厅好刺眼把窗连拉一下撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说能不能客厅有点冷麻烦了",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "唉，客听的灯大开一下嘛呗吧",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词+方言"
+    }
+  },
+  {
+    "input": "我说，要睡觉了卧世灯调暗点",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "set",
+      "value": 30,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 30
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "唉，吃饭了卧室开亮一点谢谢",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "set",
+      "value": 100,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 100
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "我说帮我卧室太阳太大了把窗帘拉上可以吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "能不卧室太阳太大了把窗帘拉上哈啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说啊，客厅有点热啊咩",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "卧室有点热啊嘛",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "卧室太冷了咩",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说，克厅窗连拉成半开撒哈",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "半开",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "半开"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词+方言"
+    }
+  },
+  {
+    "input": "给我卧室太冷了可以吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说啊，卧试的窗连关毕嘛",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "唉，可听太阳太大了把窗帘拉上好吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "请你客厅太热了行吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说你能不能要睡觉了把卧室灯关掉感谢",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "帮我客厅好刺眼把窗连拉一下谢谢",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "麻烦卧世的电世关一下感谢",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_tv",
+      "device_name": "卧室电视",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "我说你能不能卧室太黑了撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "客听的灯大开一下嘛",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词+方言"
+    }
+  },
+  {
+    "input": "我说帮我卧室太热了咯",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说能不能卧室空调再高一点辛苦啦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "increase",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "卧室晃眼撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "请客厅好刺眼把窗连拉一下撒行不",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "请你卧试的窗连关毕行不行",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "你给客听好刺眼把窗连拉一下噻",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "请你卧室空跳再高一点行不行",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "increase",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "嗯，我妈嫌热，克厅空条再凉一点啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说啊，卧事有点热啊麻烦了",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说帮我客厅晃眼可以吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "能不能卧室好闷啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说啊，要睡觉了客厅灯调暗点辛苦啦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "set",
+      "value": 30,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 30
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "客厅好刺眼把窗连拉一下噻",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "给我克听晃眼好不好",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "客厅太热了行吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说帮我卧试的窗连关毕呗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "你给我客厅太热了好吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "卧室太冷了好吗啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "你给卧室好闷啊嘛啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "你看啊，克厅那个卧试风格的空条关毕下哈",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "请你卧试的窗连关毕哈好不好",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "请卧室空调再高一点噻",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "increase",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "请你卧试的窗连关毕",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "麻烦你克厅那个卧试风格的空条关毕下可以吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "麻烦你吃饭了客厅开亮一点咯",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "set",
+      "value": 100,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 100
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "卧室太亮了晃眼",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "你给要睡觉了卧室灯调暗点麻烦了",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "set",
+      "value": 30,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 30
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "你看啊，客厅好刺眼把窗连拉一下咯",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "麻烦你客厅太热了谢谢",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "帮我客厅有点冷呗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "客厅有点闷开个空调好吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "请娃要洗澡，卧试空调开个27度麻烦了吧",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": 27,
+      "value_type": "temperature",
+      "attrs": {
+        "temperature": 27,
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "我说啊，卧室太阳太大了把窗帘拉上哈",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "卧试的窗连关毕噻",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "请课厅好刺眼把窗连拉一下哦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "麻烦卧室空调再高一点嘛",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "increase",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说帮我卧试的窗连关毕辛苦啦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "能不卧室空凋再高一点哈",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "increase",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "麻烦你好刺眼，客厅那个空条能不能开下啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "代词+错词"
+    }
+  },
+  {
+    "input": "给我要睡觉了卧室灯调暗点可以吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "set",
+      "value": 30,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 30
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "我说，卧室太阳太大了把窗帘拉上",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说能不能娃要洗澡，卧室空调开个24度啦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": 24,
+      "value_type": "temperature",
+      "attrs": {
+        "temperature": 24,
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "我说能不能卧室太黑了哈谢谢",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "唉，客厅空调再高一点撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "increase",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "能不客厅好刺眼把窗连拉一下嘛",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "麻烦客厅空调再高一点撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "increase",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "嗯，克厅窗连拉成半开撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "半开",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "半开"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词+方言"
+    }
+  },
+  {
+    "input": "唉，客厅好刺眼把窗连拉一下",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说能不能我走了把卧试灯关一下哈",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "帮我客听的灯大开一下嘛谢谢",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词+方言"
+    }
+  },
+  {
+    "input": "你给我要睡觉了卧室灯调暗点可以吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "set",
+      "value": 30,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 30
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "唉，卧室太冷了噻",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "麻烦卧室好闷啊咯",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说你能不能客厅有点冷辛苦啦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "你给我卧室好闷啊噻",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "给我要睡觉了卧室灯调暗点咯吧",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "set",
+      "value": 30,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 30
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "给我卧世的电世关一下啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_tv",
+      "device_name": "客厅电视",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "我说啊，卧世的电世关一下哈",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_tv",
+      "device_name": "客厅电视",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "麻烦卧试的窗连关毕哈",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "帮我娃要洗澡，卧室空调开个26度啦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": 26,
+      "value_type": "temperature",
+      "attrs": {
+        "temperature": 26,
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "你看啊，卧试的窗连关毕",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "我说能不能娃要洗澡，卧室空调开个28度呗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": 28,
+      "value_type": "temperature",
+      "attrs": {
+        "temperature": 28,
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "卧室空调再高一点行不行麻烦了",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "increase",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "那个，客厅有点暗咩",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "请你客厅有点热啊吧",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "请卧试的窗连关毕哈",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "我说帮我卧试的窗连关毕咩",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "卧试太黑了嘛",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "好刺眼，客听那个空条能不能开下",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "代词+错词"
+    }
+  },
+  {
+    "input": "请你我妈嫌热，卧室空调再凉一点噻",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "帮我卧室好闷啊谢谢啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "你看啊，卧室好刺眼把窗连拉一下辛苦啦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "那个，卧室有点暗啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说，吃饭了卧室开亮一点可以吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "set",
+      "value": 100,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 100
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "你给我我走了把卧世灯关一下呗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "嗯，克厅窗连拉成半开撒撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "半开",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "半开"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词+方言"
+    }
+  },
+  {
+    "input": "我说你能不能看电视了把客厅灯暗一点行不行",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "set",
+      "value": 30,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 30
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "你给客厅太热了好不好",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "客厅有点冷",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说啊，客厅太黑了好不好",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "你给好刺眼，客厅那个空条能不能开下撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "代词+错词"
+    }
+  },
+  {
+    "input": "麻烦你卧室晃眼",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "能不客厅晃眼",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "你给我客厅空跳再低一度啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "那个，客厅好刺眼把窗连拉一下辛苦啦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "请客厅太亮了晃眼嘛",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "麻烦你客厅太亮了晃眼哈",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "要睡觉了卧室灯调暗点辛苦啦哦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "set",
+      "value": 30,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 30
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "能不能卧室好闷啊感谢",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说帮我要睡觉了把客听灯关掉噻",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "帮我客厅空调再低一度好不好",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我妈嫌热，客厅空调再凉一点吧",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "请你吃饭了卧事开亮一点咯",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "set",
+      "value": 100,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 100
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "麻烦客厅有点热啊吧麻烦了",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "客厅有点热啊哦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "能不能可听好刺眼把窗连拉一下行吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_curtain",
+      "device_name": "客厅窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "你看啊，卧事太冷了哦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "麻烦客厅太亮了晃眼",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "那个，卧试的窗连关毕行吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "请你我走了把卧室灯关一下辛苦啦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "我说能不能客厅晃眼啦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "请卧试的窗连关毕哦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "我说你能不能克听空跳再低一度辛苦啦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说啊，卧试的窗连关毕行吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_curtain",
+      "device_name": "卧室窗帘",
+      "action": "set",
+      "value": "全关",
+      "value_type": "curtain_state",
+      "attrs": {
+        "state": "全关"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "能不能客厅空调再低一度",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说啊，我走了把客听灯关一下哈",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "嗯，吃饭了客厅开亮一点可以吗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "set",
+      "value": 100,
+      "value_type": "brightness",
+      "attrs": {
+        "brightness": 100
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "卧室空调再低一度麻烦了",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说，客厅有点暗",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "克厅太亮了晃眼哈一下",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_light",
+      "device_name": "客厅灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "请你客听有点闷开个空调咩",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "能不能娃要洗澡，客厅空条开个24度哈",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": 24,
+      "value_type": "temperature",
+      "attrs": {
+        "temperature": 24,
+        "mode": "heating"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "嗯，客厅太热了嘛",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "on",
+      "value": null,
+      "value_type": null,
+      "attrs": {
+        "mode": "cooling"
+      },
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "那个，我妈嫌热，卧室空凋再凉一点撒",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "我说啊，我妈嫌热，客厅空调再凉一点",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "living_room_ac",
+      "device_name": "客厅空调",
+      "action": "decrease",
+      "value": null,
+      "value_type": "temperature",
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  },
+  {
+    "input": "那个，克厅那个卧试风格的空条关毕下哦",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_ac",
+      "device_name": "卧室空调",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "错词堆叠"
+    }
+  },
+  {
+    "input": "我说你能不能我走了把卧室灯关一下",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "情境指令"
+    }
+  },
+  {
+    "input": "嗯，卧室晃眼嘛啊",
+    "output_json": {
+      "success": true,
+      "msg": "解析成功",
+      "device_id": "bedroom_light",
+      "device_name": "卧室灯",
+      "action": "off",
+      "value": null,
+      "value_type": null,
+      "attrs": {},
+      "confidence": 1.0,
+      "need_clarification": false
+    },
+    "meta": {
+      "source": "local_rule_augment",
+      "scenario": "间接请求"
+    }
+  }
+]

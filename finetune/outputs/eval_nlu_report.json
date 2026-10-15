@@ -1,0 +1,129 @@
+{
+  "meta": {
+    "limit": 5,
+    "backends": [
+      "rule"
+    ],
+    "eval_file": "finetune/outputs/nlu_eval.jsonl"
+  },
+  "results": {
+    "rule": {
+      "total": 5,
+      "elapsed_s": 0.01,
+      "http_errors": 0,
+      "json_parse_rate": 1.0,
+      "intent_acc": 0.6,
+      "slot_macro_f1": 0.64,
+      "slot_macro_p": 0.84,
+      "slot_macro_r": 0.5733,
+      "slot_per_slot": {
+        "value": {
+          "f1": 0.5,
+          "p": 1.0,
+          "r": 0.3333,
+          "tp": 1,
+          "pp": 1,
+          "gp": 3
+        },
+        "value_type": {
+          "f1": 0.5,
+          "p": 1.0,
+          "r": 0.3333,
+          "tp": 1,
+          "pp": 1,
+          "gp": 3
+        },
+        "attrs": {
+          "f1": 0.6,
+          "p": 0.6,
+          "r": 0.6,
+          "tp": 3,
+          "pp": 5,
+          "gp": 5
+        },
+        "action": {
+          "f1": 0.6,
+          "p": 0.6,
+          "r": 0.6,
+          "tp": 3,
+          "pp": 5,
+          "gp": 5
+        },
+        "need_clarification": {
+          "f1": 1.0,
+          "p": 1.0,
+          "r": 1.0,
+          "tp": 5,
+          "pp": 5,
+          "gp": 5
+        }
+      },
+      "samples": [
+        {
+          "idx": 2,
+          "input": "把客厅空调调到24度",
+          "gold": {
+            "success": true,
+            "msg": "解析成功",
+            "device_id": "living_room_ac",
+            "device_name": "客厅空调",
+            "action": "set_temperature",
+            "value": 24,
+            "value_type": "temperature",
+            "attrs": {
+              "temperature": 24
+            },
+            "confidence": 1.0,
+            "need_clarification": false
+          },
+          "pred": {
+            "device_id": "living_room_ac",
+            "device_name": "客厅空调",
+            "action": "set",
+            "value": 24,
+            "value_type": "temperature",
+            "attrs": {},
+            "_inferred_by_attr": false,
+            "_explicit_room_slug": "living_room",
+            "success": true,
+            "msg": "意图解析成功",
+            "confidence": 0.9,
+            "need_clarification": false
+          }
+        },
+        {
+          "idx": 3,
+          "input": "客厅电视频道36",
+          "gold": {
+            "success": true,
+            "msg": "解析成功",
+            "device_id": "living_room_tv",
+            "device_name": "客厅电视",
+            "action": "set",
+            "value": 36,
+            "value_type": "channel",
+            "attrs": {
+              "channel": 36
+            },
+            "confidence": 1.0,
+            "need_clarification": false
+          },
+          "pred": {
+            "device_id": "living_room_tv",
+            "device_name": "客厅电视",
+            "action": "unknown",
+            "value": null,
+            "value_type": null,
+            "attrs": {},
+            "_inferred_by_attr": false,
+            "_explicit_room_slug": "living_room",
+            "success": false,
+            "msg": "识别到设备「客厅电视」但未识别到操作意图",
+            "confidence": 0.3,
+            "need_clarification": false
+          }
+        }
+      ]
+    }
+  }
+}

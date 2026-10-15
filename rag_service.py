@@ -384,16 +384,6 @@ def search_knowledge(query: str, top_k: int = 2) -> List[Dict[str, Any]]:
     ]
 
 
-def is_available() -> bool:
-    """检查 RAG 服务是否可用（ChromaDB 已安装且有数据）"""
-    if not _get_chroma_client():
-        return False
-    try:
-        return _collection.count() > 0
-    except Exception:
-        return False
-
-
 # ==================== 命令行入口：初始化知识库 ====================
 if __name__ == "__main__":
     import sys

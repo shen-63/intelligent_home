@@ -1,0 +1,37 @@
+# =================================================================
+# Ollama Modelfile 模板：本地部署 SFT 后的 qwen2.5-1.5b-nlu
+# 用法（在 PowerShell 下，把 {{GGUF_PATH}} 换成你真实的 gguf 文件路径）：
+#   cd c:\Users\shy\Desktop\intelligent_home
+#   (Get-Content finetune\deploy\ollama\Modelfile.template -Raw) `
+#       -replace '{{GGUF_PATH}}','c:/models/qwen2.5-1.5b-nlu-q4_k_m.gguf' | `
+#       Set-Content finetune\deploy\ollama\Modelfile -Encoding UTF8
+#   ollama create qwen2.5-1.5b-nlu:q4_k_m -f finetune\deploy\ollama\Modelfile
+#   ollama run qwen2.5-1.5b-nlu:q4_k_m
+# =================================================================
+
+FROM {{GGUF_PATH}}
+
+TEMPLATE """{{- range $index, $_ := .Messages }}
+{{- if eq .Role "system" }}<|im_start|>system
+{{ .Content }}<|im_end|>
+{{ else if eq .Role "user" }}<|im_start|>user
+{{ .Content }}<|im_end|>
+{{ else if eq .Role "assistant" }}<|im_start|>assistant
+{{ .Content }}<|im_end|>
+{{ end }}{{- if eq (len .Messages) (add $index 1) }}<|im_start|>assistant
+{{ end }}{{ end }}"""
+
+SYSTEM """你是智能家居自然语言理解（NLU）解析器，负责把用户的口语指令解析为固定结构的 JSON。
+字段严格要求：device_id, device_name, command, action 四项必填字符串；
+可选字段：value (int/float/str)、value_type (temperature/brightness/volume/position等)、attrs (dict)。
+只输出 JSON，不要任何解释、不要 markdown 三引号，不要多余文字。"""
+
+# ---- Qwen2.5 的 stop tokens（chat template 是 <|im_end|>）----
+PARAMETER stop "<|im_end|>"
+PARAMETER stop "<|im_start|>"
+
+# NLU 是结构化输出，保持 greedy + 低 top_p，避免瞎编
+PARAMETER temperature 0.0
+PARAMETER top_p 1.0
+PARAMETER num_ctx 1024
+PARAMETER num_predict 512

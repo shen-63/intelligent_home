@@ -635,21 +635,64 @@ function updateDeviceStates(response) {
 }
 
 // Recording
+// 严格时序说明：
+//   mousedown/touchstart → startRecording()
+//     1) audioChunks = [] 立即清空（避免上一轮录音残留）
+//     2) 懒获取一次 mediaStream（复用，避免每次 getUserMedia 有 200-500ms 延迟丢首段）
+//     3) MediaRecorder.start(100) — 每 100ms 强制推一块（否则某些 WebM 实现只有 stop 时才推 1 块，
+//        并且因为 stop 异步，块可能还未进入 audioChunks 就被 new Blob 读取，形成 blob.size = 0）
+//     4) ondataavailable 只 push size>0 的 chunk，保证没有 padding noise
+//   mouseup/touchend → handleRecordingDone()
+//     → await stopRecording()（Promise，确保 onstop 事件触发后才把 audioChunks 拼成 Blob）
+//     → size < 1000 前端直接 Toast，不发请求
 async function startRecording() {
-  try {
-    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, sampleRate: 16000 } });
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const source = audioContext.createMediaStreamSource(mediaStream);
-    analyser = audioContext.createAnalyser();
-    analyser.fftSize = 256;
-    source.connect(analyser);
-    dataArray = new Uint8Array(analyser.frequencyBinCount);
+  // 必须在录音开始前清空上一次的数据
+  audioChunks = [];
 
-    mediaRecorder = new MediaRecorder(mediaStream, { mimeType: 'audio/webm' });
-    audioChunks = [];
-    mediaRecorder.ondata = e => audioChunks.push(e.data);
-    mediaRecorder.onstop = handleRecordingDone;
-    mediaRecorder.start();
+  try {
+    // —— mediaStream 只懒初始化一次，每次开始录音复用（避免反复 getUserMedia 有延迟）——
+    if (!mediaStream) {
+      // 严禁在此处强制指定 sampleRate: 16000 / channelCount: 1，否则会导致 Windows
+      // 多数 USB/板载麦克风触发 OverconstrainedError 或退化为 0 字节录音流（blob.size = 0）。
+      // 采样率/声道交给浏览器按麦克风原生能力协商，后端 FunASR 在 ffmpeg 转码阶段统一到 16k。
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        }
+      });
+    }
+
+    // —— 如果 audioContext 还没建（或被页面后台 suspend 过），顺带建好用于波形 ——
+    if (!audioContext || audioContext.state === 'closed') {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const source = audioContext.createMediaStreamSource(mediaStream);
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      dataArray = new Uint8Array(analyser.frequencyBinCount);
+    } else if (audioContext.state === 'suspended') {
+      // 切到后台后 AudioContext 会被浏览器自动 suspend，必须 resume 才能继续画波形
+      try { await audioContext.resume(); } catch (_) {}
+    }
+
+    // —— MediaRecorder：每 100ms 触发一次 ondataavailable 推送 chunk ——
+    // 不指定 mimeType，优先用浏览器原生支持的（通常 webm），兼容性最好；
+    // 最后生成 Blob 时再用 mediaRecorder.mimeType 回填类型。
+    mediaRecorder = new MediaRecorder(mediaStream);
+
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data && event.data.size > 0) {
+        audioChunks.push(event.data);
+        console.log("[Recording] 收到数据块，大小:", event.data.size, "累计块数:", audioChunks.length);
+      }
+    };
+
+    // 关键点：传入 100 毫秒切片，让底层持续推送数据，
+    // 避免"只有最后 stop 那一下才出一块"时 stop() 异步导致 audioChunks 仍为空就打包 Blob。
+    mediaRecorder.start(100);
+    console.log("[Recording] 录音已启动... mediaRecorder.state=", mediaRecorder.state);
 
     isRecording = true;
     recordStartTime = Date.now();
@@ -658,25 +701,67 @@ async function startRecording() {
     recordHint.innerHTML = '<span class="recording-text">● 录音中...</span> 松开发送';
     drawWaveform();
   } catch (e) {
+    // 异常时回到初始状态，避免 isRecording=true 卡死
+    isRecording = false;
     showToast('无法访问麦克风: ' + e.message, 'error');
+    console.error('[Recording] 无法获取麦克风:', e);
   }
 }
 
+/**
+ * 停止录音 → 返回最终 Blob（Promise，只有 onstop 触发后才 resolve）。
+ * 时序保证：所有 start(100) 产生的 chunk + stop() 前最后一块，都在 onstop 里 push 入 audioChunks 之后才打包。
+ */
 function stopRecording() {
-  if (!isRecording) return;
-  isRecording = false;
-  const duration = (Date.now() - recordStartTime) / 1000;
-  if (duration < 0.3) {
-    recordHint.textContent = '说话时间太短，再试一次';
-    setTimeout(() => recordHint.textContent = '按住说话', 1500);
-  }
-  mediaRecorder.stop();
-  mediaStream.getTracks().forEach(t => t.stop());
-  waveform.classList.remove('active');
-  recordBtn.classList.remove('recording');
-  recordHint.textContent = '按住说话';
-  if (waveAnimId) cancelAnimationFrame(waveAnimId);
-  waveBars.forEach(b => b.style.height = '4px');
+  return new Promise((resolve) => {
+    // 已 stop 或根本没开始：直接 return null，避免二次 stop() 抛异常
+    if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+      resolve(null);
+      return;
+    }
+
+    // —— 先关 UI / 停波形：和以前行为一致，用户松手立刻看到"停止录音"视觉反馈 ——
+    isRecording = false;
+    waveform.classList.remove('active');
+    recordBtn.classList.remove('recording');
+    recordHint.textContent = '按住说话';
+    if (waveAnimId) {
+      cancelAnimationFrame(waveAnimId);
+      waveAnimId = null;
+    }
+    if (waveBars && waveBars.length) {
+      waveBars.forEach(b => b.style.height = '4px');
+    }
+
+    // 监听 stop 完成事件，确保所有 chunk 都已 push 入数组后才打包 Blob 并 resolve
+    // （不要在 mediaRecorder.stop() 调用完就立刻 new Blob，因为 stop() 只是派发一个异步任务）
+    const recorderRef = mediaRecorder;
+    recorderRef.onstop = () => {
+      console.log("[Recording] 录音停止，总块数:", audioChunks.length);
+
+      // 松手立刻把 track 静音/停掉（避免后面录音期间泄漏到扬声器）
+      // 注意：mediaStream 不销毁，下次 startRecording 复用（getUserMedia 真的慢）
+      try {
+        (mediaStream ? mediaStream.getTracks() : []).forEach(t => {
+          try { t.enabled = false; } catch (_) {}  // 下一次 start 会再 enable=true
+        });
+      } catch (_) {}
+
+      const mimeType = recorderRef.mimeType || 'audio/webm';
+      const finalBlob = new Blob(audioChunks, { type: mimeType });
+      console.log("[Recording] 生成最终 Blob 大小:", finalBlob.size, "type:", mimeType);
+      resolve(finalBlob);
+    };
+
+    try {
+      recorderRef.stop();
+    } catch (e) {
+      console.warn("[Recording] recorder.stop() 异常（可能已 inactive）:", e);
+      // 兜底：即使 onstop 没触发，手动 resolve 一个 Blob，避免 handleRecordingDone 永远挂起
+      const finalBlob = new Blob(audioChunks, { type: recorderRef.mimeType || 'audio/webm' });
+      resolve(finalBlob.size ? finalBlob : null);
+    }
+  });
 }
 
 function drawWaveform() {
@@ -691,11 +776,11 @@ function drawWaveform() {
   waveAnimId = requestAnimationFrame(drawWaveform);
 }
 
-async function handleRecordingDone() {
-  const blob = new Blob(audioChunks, { type: 'audio/webm' });
-  const duration = (Date.now() - recordStartTime) / 1000;
-  if (duration < 0.3) return;
-
+/**
+ * 向后端提交录音，抽取成独立函数以便 handleRecordingDone 只负责"录音时序与判空"。
+ * 这部分代码和原来的 fetch / 解析 / addMessage 完全一致（保留历史契约字段，不做 UI/协议变更）。
+ */
+async function sendAudioToBackend(blob) {
   loadingText.textContent = '正在识别中...';
   loading.classList.add('show');
 
@@ -710,7 +795,12 @@ async function handleRecordingDone() {
     if (conversationId) url.searchParams.set('conversation_id', conversationId);
 
     const formData = new FormData();
-    formData.append('file', blob, 'recording.webm');
+    // 先过滤掉 ;codecs=... 等参数，只保留主 MIME 类型（如 "audio/webm"）
+    // MediaRecorder.mimeType 会返回类似 "audio/webm;codecs=opus"，若直接当扩展名会变成
+    // "recording.webm;codecs=opus"，后端校验扩展时会判定为非法格式从而 400。
+    const mimeBase = (blob.type || '').split(';')[0];
+    const ext = mimeBase.split('/')[1] || 'webm';
+    formData.append('file', blob, 'recording.' + ext);
 
     const response = await fetch(url.toString(), { method: 'POST', body: formData });
 
@@ -740,6 +830,40 @@ async function handleRecordingDone() {
   }
 }
 
+/**
+ * mouseup/touchend 的入口处理函数：
+ *   只有在 await stopRecording() 真正拿到 Blob 后才走判空 → 提交后端。
+ * 彻底修复：mediaRecorder.stop() 是异步的，以前在 onstop 外立刻 new Blob(audioChunks)
+ * 会拿到空数组导致 blob.size = 0，然后被"录音为空"拦截误判。
+ */
+async function handleRecordingDone() {
+  // stopRecording() 返回 Promise，onstop 触发后才 resolve
+  const audioBlob = await stopRecording();
+  const duration = (Date.now() - recordStartTime) / 1000;
+
+  // 说话太短（< 0.3s）沿用原 UI 提示，但不再做任何后端请求（录音数据本身也没意义）
+  if (duration < 0.3 && audioBlob && audioBlob.size > 0) {
+    recordHint.textContent = '说话时间太短，再试一次';
+    setTimeout(() => { recordHint.textContent = '按住说话'; }, 1500);
+    return;
+  }
+
+  // —— ★【前端录音有效性拦截】小于 1KB 视为没录入声音，不往后端发，直接 Toast 提示 ——
+  if (!audioBlob || audioBlob.size < 1000) {
+    console.warn("[Recording] 录音为空或时间过短。blob.size=" + (audioBlob ? audioBlob.size : 0));
+    showToast("未检测到声音，请按住麦克风重新说话", "error");
+    return;
+  }
+
+  // 只有 Blob 有数据时才向后端发送请求
+  // —— 开启下一次使用的麦克风 track 预先 enabled=true（为下次 startRecording 做热身）——
+  try {
+    (mediaStream ? mediaStream.getTracks() : []).forEach(t => { try { t.enabled = true; } catch (_) {} });
+  } catch (_) {}
+
+  await sendAudioToBackend(audioBlob);
+}
+
 function addMessage(role, text, audioBlob = null) {
   const div = document.createElement('div');
   div.className = 'message ' + role;
@@ -755,7 +879,9 @@ function addMessage(role, text, audioBlob = null) {
     bubble.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
   } else {
     bubble.textContent = text;
-    if (audioBlob) {
+    // ★【前端 TTS 防空】audioBlob 为 null 或大小 < 20B（后端占位的"空音频"），直接静默跳过，不再渲染"抱歉出了点问题:音频文件为空"
+    const isEmptyAudio = !audioBlob || audioBlob.size < 20;
+    if (audioBlob && !isEmptyAudio) {
       const audio = document.createElement('audio');
       audio.controls = true;
       audio.autoplay = true;
@@ -779,11 +905,14 @@ function addMessage(role, text, audioBlob = null) {
 }
 
 // Event listeners
+// ⚠️ 重要：mouseup/touchend 必须挂 handleRecordingDone（会 async await stopRecording() 直到 onstop 触发后才打包 Blob）
+//   不能挂原来的同步 stopRecording 函数 —— 那样 mouseup 之后立刻在事件循环的"下一个 tick"里去 new Blob(audioChunks)，
+//   但 MediaRecorder.stop() 是异步派发 onstop 的，导致 audioChunks 还没收到最后一块，出现 blob.size=0 的时序 BUG。
 let holdTimer = null;
 recordBtn.addEventListener('mousedown', startRecording);
 recordBtn.addEventListener('touchstart', e => { e.preventDefault(); startRecording(); });
-document.addEventListener('mouseup', stopRecording);
-document.addEventListener('touchend', stopRecording);
+document.addEventListener('mouseup', handleRecordingDone);
+document.addEventListener('touchend', handleRecordingDone);
 
 clearBtn.addEventListener('click', () => {
   chatBody.innerHTML = '';

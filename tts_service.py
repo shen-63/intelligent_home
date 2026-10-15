@@ -1,4 +1,4 @@
-﻿"""TTS 语音合成服务
+"""TTS 语音合成服务
 
 基于 edge-tts (Microsoft Edge 在线 TTS) 的轻量封装。
 提供文本预处理、文件/字节/响应三种合成模式，以及临时文件清理。
@@ -176,8 +176,18 @@ async def synthesize(
         Output file path
     """
     cleaned = clean_tts_text(text)
+    # —— ★【TTS 防空闸门 第四层：synthesize_file 内核】——
     if not cleaned:
-        raise ValueError("Text is empty after TTS preprocessing")
+        # 空文本：直接写 0 字节 mp3 占位文件，不触发网络合成，避免 edge-tts 合成空内容时返回 0 字节导致下游判断成 "音频文件为空" 抛 400。
+        #   调用方可识别 "空音频" (size == 0) 自行静默处理。
+        try:
+            with open(output_path, "wb") as _f:
+                pass
+            print(f"[TTS-SAFEGUARD] synthesize_file 文本为空，生成 0 字节占位音频 → {output_path!r}")
+            return output_path
+        except Exception as _e:
+            cleaned = "操作已完成。"
+            print(f"[TTS-SAFEGUARD] synthesize_file 生成占位失败，退回兜底文案 → {cleaned!r} ({_e!r})")
 
     parent_dir = os.path.dirname(output_path) or "."
     _cleanup_stale_temp_files(parent_dir)
@@ -207,8 +217,11 @@ async def synthesize_to_bytes(
         MP3 audio bytes
     """
     cleaned = clean_tts_text(text)
+    # —— ★【TTS 防空闸门 第四层：synthesize_to_bytes 内核】——
     if not cleaned:
-        raise ValueError("Text is empty after TTS preprocessing")
+        # 空文本：直接返回空字节，不触发网络合成，避免 0 字节被下游判断 "音频文件为空" 抛 400
+        print("[TTS-SAFEGUARD] synthesize_to_bytes 文本为空，返回 0 字节占位音频")
+        return b""
 
     with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
         temp_path = f.name
@@ -252,8 +265,25 @@ async def synthesize_to_response(
         }
     """
     cleaned = clean_tts_text(text)
+    # —— ★【TTS 防空闸门 第四层：synthesize_to_response 内核】——
     if not cleaned:
-        raise ValueError("Text is empty after TTS preprocessing")
+        # 空文本：返回 0 字节占位音频文件路径，不触发网络合成，避免上层 FileResponse 因 size=0 误报 "音频文件为空" 抛 400。
+        #   调用方识别 X-TTS-Empty=1 或 size==0 后应静默跳过播放（保持用户体验友好）。
+        os.makedirs(tts_dir, exist_ok=True)
+        task_id = str(uuid.uuid4().hex[:12])
+        output_path = os.path.join(tts_dir, f"tts_{task_id}.mp3")
+        try:
+            with open(output_path, "wb") as _f:
+                pass
+            print(f"[TTS-SAFEGUARD] synthesize_to_response 文本为空，生成 0 字节占位音频 → {output_path!r}")
+            return {
+                "file_path": output_path,
+                "cleaned_text": "",
+                "empty": True,
+            }
+        except Exception as _e:
+            cleaned = "操作已完成。"
+            print(f"[TTS-SAFEGUARD] synthesize_to_response 生成占位失败，退回兜底文案 → {cleaned!r} ({_e!r})")
 
     os.makedirs(tts_dir, exist_ok=True)
     _cleanup_stale_temp_files(tts_dir)

@@ -1,0 +1,76 @@
+# =================================================================
+# LLaMA-Factory LoRA SFT 训练主配置
+#   目标：Qwen2.5-1.5B-Instruct，在 <project>/finetune/outputs/nlu_train.jsonl 上做
+#         智能家居 NLU 指令微调（NLU Parse）。
+#   路径约定（全部相对本 YAML 所在目录 <project>/finetune/train/）：
+#     · dataset_info.json 就在当前目录
+#     · 数据文件 ../outputs/nlu_train.jsonl / nlu_eval.jsonl
+#     · 输出 saves/qwen2.5-1.5b-nlu-lora/
+#
+# 运行方法（在 Colab / 本机装好 llamafactory 后）：
+#   llamafactory-cli train finetune/train/configs/lora_sft_qwen1.5b.yaml
+# 或
+#   llamafactory-cli train --config finetune/train/configs/lora_sft_qwen1.5b.yaml
+# =================================================================
+
+# ---- 模型 ----
+model_name_or_path: "Qwen/Qwen2.5-1.5B-Instruct"
+# 如果你已经本地 gguf/hf 模型落地，直接写绝对路径，比如：
+# model_name_or_path: "C:/Users/shy/.cache/huggingface/hub/models--Qwen--Qwen2.5-1.5B-Instruct/snapshots/xxx"
+
+template: qwen
+finetuning_type: lora
+stage: sft
+
+# ---- 数据注册（必须把 dataset_info.json 里的两个 dataset 分开引用：train / eval）----
+dataset_dir: ".."                        # 指向 <project>/finetune/train/.. = <project>/finetune/，正好能看到当前目录里的 dataset_info.json
+dataset: "nlu_train"
+eval_dataset: "nlu_eval"
+# 注意：llm_nlu.SYSTEM_PROMPT 有 ~3.8KB 中文字符（≈1500~1800 tokens），加上 user+assistant 要 ~2048 才安全
+cutoff_len: 2048
+max_samples: 1600
+overwrite_cache: false
+preprocessing_num_workers: 4
+streaming: false
+
+# ---- LoRA 参数（1.5B 的安全基线，3050 4GB 或 T4 都能塞下）----
+lora_rank: 16
+lora_alpha: 32
+lora_dropout: 0.05
+lora_target: "q_proj,v_proj,k_proj,o_proj,gate_proj,up_proj,down_proj"
+# QLoRA 4bit：开启后 1.5B 在 4GB 3050 上也能训（Colab T4 也能用，显存剩更多）
+quantization_bit: 4
+quantization_type: nf4
+double_quantization: true
+
+# ---- 训练超参（3 epoch 基线，过拟合再降 epoch / rank）----
+output_dir: "../train/saves/qwen2.5-1.5b-nlu-lora"
+per_device_train_batch_size: 2
+gradient_accumulation_steps: 4
+learning_rate: 5.0e-5
+num_train_epochs: 3
+lr_scheduler_type: cosine
+warmup_ratio: 0.03
+weight_decay: 0.0
+max_grad_norm: 1.0
+fp16: true
+bf16: false
+
+# ---- logging & checkpointing ----
+logging_steps: 10
+save_steps: 200
+save_total_limit: 2
+report_to: none
+
+# ---- 评估（每 200 step 在 eval 上跑 loss；最终用 eval/eval_nlu.py 跑真实业务指标）----
+val_size: 0.05
+eval_strategy: steps
+eval_steps: 200
+per_device_eval_batch_size: 4
+predict_with_generate: false
+
+# ---- 其它 ----
+seed: 42
+dataloader_num_workers: 0
+ddp_timeout: 1800
+disable_tqdm: false

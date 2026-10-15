@@ -18,7 +18,10 @@ from pydantic import BaseModel
 import uvicorn
 from funasr import AutoModel
 
-from nlu_parser import parse_intent, parse_multi_intent, resolve_device_id, get_device_risk, set_last_device
+from nlu_parser import (parse_intent, parse_multi_intent, resolve_device_id, get_device_risk,
+                        set_last_device, asr_phonetic_correct, detect_explicit_room,
+                        ROOM_CN_TO_SLUG, preprocess_voice_text, is_effective_empty)
+from dialog_context import is_generic_device_id
 from device_controller import (
     execute_command,
     DEVICE_STATES,
@@ -27,7 +30,13 @@ from device_controller import (
     apply_mqtt_state_update,
 )
 from llm_nlu import parse_intent_llm
-from dialog_context import DialogManager, is_clarification_response, extract_room
+from dialog_context import (
+    dialog_manager,          # 共享单例（与 smart_brain 共用 sessions 字典）
+    is_clarification_response,
+    extract_room,
+    extract_room_cn,
+    build_clarification_question,
+)
 from tts_service import synthesize, synthesize_to_bytes, synthesize_to_response, list_voices, CHINESE_VOICES, clean_tts_text
 from config import SILICONFLOW_API_KEY, RULE_CONFIDENCE_THRESHOLD
 from mqtt_client import get_mqtt_client
@@ -199,8 +208,8 @@ def _shutdown_mqtt_cleanup():
     except Exception as e:
         print(f"[MQTT] shutdown 异常: {e}")
 
-# 多轮对话上下文管理器
-dialog_manager = DialogManager()
+# 多轮对话上下文管理器 → 现在使用 dialog_context.dialog_manager 共享单例（避免 main/smart_brain 各自一份 sessions）
+# 见 dialog_context.py 末尾的：dialog_manager = DialogManager()
 
 FFMPEG_EXE = imageio_ffmpeg.get_ffmpeg_exe()
 
@@ -295,31 +304,46 @@ def clean_text(text: str) -> str:
 
 async def handle_context_clarification(text: str, session_id: str) -> Optional[str]:
     """
-    检查对话上下文，如果是消歧回复则解析并执行。
-    返回执行结果文本，如果不是消歧回复则返回 None。
+    检查对话上下文，如果是消歧回复则解析并执行（需求 2 槽位补全 / 需求 3 改口重置）。
+
+    返回:
+      - 执行结果文本（str）：当是有效消歧回复时
+      - "__NEW_CMD__" 哨兵：当有 pending 但用户改口（非澄清回复），调用方应按新指令重新处理
+      - None：无 pending，完全走正常流程
     """
     pending = dialog_manager.get_pending(session_id)
     if not pending:
         return None
 
-    if not is_clarification_response(text):
-        # 不是消歧回复，清除旧上下文
-        dialog_manager.clear(session_id)
-        return None
+    # 情况A：是消歧回复（房间名/设备名）→ 合并槽位 + 立即执行
+    if is_clarification_response(text, pending):
+        room_slug = extract_room(text)
+        if not room_slug:
+            # 有时用户只说"卧室" → extract_room_cn 可识别
+            room_cn = extract_room_cn(text)
+            if room_cn:
+                from dialog_context import ROOM_KEYWORDS
+                room_slug = ROOM_KEYWORDS.get(room_cn)
+        if room_slug:
+            resolved_intent = pending.resolve_with_room(room_slug)
+            if resolved_intent:
+                print(f"[Dialog] 消歧回复 '{text}' → room={room_slug}, device_id={resolved_intent['device_id']}")
+                dialog_manager.clear(session_id, reason="clarification_resolved")
+                # 记录最后操作设备（供后续上下文续控）
+                if resolved_intent.get("device_id"):
+                    set_last_device(session_id, resolved_intent["device_id"])
+                execution = await execute_command(resolved_intent)
+                msg = execution.get("message", "指令已执行")
+                # —— ★ handle_context_clarification 返回消息强制非空 ——
+                if not isinstance(msg, str) or not msg.strip():
+                    msg = "操作已完成。"
+                    print(f"[Reply-Safe] handle_context_clarification: message 为空，兜底 → {msg!r}")
+                return msg
 
-    room = extract_room(text)
-    if not room:
-        return None
-
-    resolved_intent = pending.resolve_with_room(room)
-    if not resolved_intent:
-        dialog_manager.clear(session_id)
-        return None
-
-    print(f"[Dialog] 消歧回复 '{text}' → room={room}, device_id={resolved_intent['device_id']}")
-    dialog_manager.clear(session_id)
-    execution = await execute_command(resolved_intent)
-    return execution["message"]
+    # 情况B：有 pending 但用户【改口】或 【提取不到房间】 → 清 pending，告诉上层重走新指令
+    dialog_manager.clear(session_id, reason="user_changed_mind")
+    print(f"[Dialog] 用户改口（非消歧回复: '{text}'），已清空 pending_intent，按新指令重处理")
+    return "__NEW_CMD__"
 
 
 def hybrid_parse_intent(text: str) -> dict:
@@ -354,8 +378,18 @@ def hybrid_parse_intent(text: str) -> dict:
 
     # 规则需要消歧（LLM 不可用或 LLM 失败）：按设备风险分级处理
     if rule_result.get("need_clarification"):
-        intent = rule_result["intent"]
-        device_id = intent["device_id"]
+        intent = rule_result["intent"] or {}
+        device_id = intent.get("device_id") if isinstance(intent, dict) else None
+
+        # ★ 防兜底：只有房间没有设备（_room_only_missing_device）时，保持澄清，不做卧室→卧室_ac 这种兜底
+        if intent and intent.get("_room_only_missing_device"):
+            print(f"[NLU] 只识别到房间无设备，保留澄清提示: {rule_result.get('msg')}")
+            return rule_result
+
+        if not device_id:
+            # 没有 device_id 的消歧（如空设备、属性不足）也保持原澄清，拒绝任何默认值兜底
+            return rule_result
+
         risk = get_device_risk(device_id)
 
         if risk == "high_risk":
@@ -370,13 +404,14 @@ def hybrid_parse_intent(text: str) -> dict:
     return rule_result
 
 
-async def batch_execute_intents(intents: list, session_id: str = "") -> str:
+async def batch_execute_intents(intents: list, session_id: str = "", text: str = "") -> str:
     """
     批量执行多个意图，合并回复文本。
 
     Args:
         intents: parse_multi_intent 返回的意图列表
         session_id: 会话ID，用于保存消歧上下文
+        text: 原始用户文本（用于【需求 4】房间锁定，含"客厅/克厅/卧室/卧试"时禁止反问）
 
     Returns:
         合并后的回复文本
@@ -389,13 +424,30 @@ async def batch_execute_intents(intents: list, session_id: str = "") -> str:
     clarification_msg = ""
     clarification_intent = None
 
+    # 【需求 4】最高优先级：文本明确提到客厅/卧室（含同音错词）时，通用设备ID直接 resolve 到指定房间
+    explicit_room = detect_explicit_room(text, asr_corrected=True) if isinstance(text, str) else ""
+    if explicit_room:
+        for intent in intents:
+            did = intent.get("device_id", "") or ""
+            if is_generic_device_id(did):
+                fixed = resolve_device_id(did, explicit_room=explicit_room)
+                if fixed != did:
+                    intent["device_id"] = fixed
+                    intent["need_clarification"] = False
+                    room_cn = {v: k for k, v in ROOM_CN_TO_SLUG.items()}.get(explicit_room, "")
+                    type_cn = {"air_conditioner": "空调", "ac": "空调", "light": "灯",
+                               "curtain": "窗帘", "tv": "电视"}.get(did, "")
+                    if room_cn and type_cn:
+                        intent["device_name"] = room_cn + type_cn
+        print(f"[batch_execute_intents] ★ 房间锁定(text={text!r}): room={explicit_room!r}，跳过 clarify")
+
     for intent in intents:
         device_id = intent.get("device_id", "")
         risk = get_device_risk(device_id)
 
-        # 高风险通用设备需要消歧
+        # 高风险通用设备需要消歧（但用户已给明确房间时跳过）
         if device_id in ("air_conditioner", "light", "curtain", "tv"):
-            if risk == "high_risk":
+            if risk == "high_risk" and not explicit_room and not intent.get("_explicit_room_slug"):
                 has_clarification = True
                 device_name = intent.get("device_name", "该设备")
                 candidates = {
@@ -424,9 +476,11 @@ async def batch_execute_intents(intents: list, session_id: str = "") -> str:
         dialog_manager.save_pending(session_id, clarification_intent)
 
     if has_clarification and clarification_msg:
-        if messages:
-            return "，".join(messages) + "。另外，" + clarification_msg
-        return clarification_msg
+        reply = ("，".join(m.strip() for m in messages if isinstance(m, str) and m.strip())
+                 + "。另外，" + clarification_msg) if messages else clarification_msg
+        if not reply.strip():
+            reply = "操作已完成。"
+        return reply
 
     if not messages:
         return "抱歉，无法识别您的指令。"
@@ -437,10 +491,18 @@ async def batch_execute_intents(intents: list, session_id: str = "") -> str:
 
     # 合并：如果有多个成功，用"和"连接
     if len(messages) == 1:
-        return messages[0]
+        s = messages[0]
+        if isinstance(s, str) and s.strip():
+            return s
+        return "操作已完成。"
 
     # 提取共性前缀，生成自然的合并句
-    return _merge_messages(messages)
+    merged = _merge_messages(messages)
+    # —— ★ batch_execute_intents 最终出口：非空兜底 ——
+    if not isinstance(merged, str) or not merged.strip():
+        merged = "操作已完成。"
+        print(f"[Reply-Safe] batch_execute_intents: 合并后为空，兜底 → {merged!r}")
+    return merged
 
 
 def _merge_messages(messages: list) -> str:
@@ -1579,57 +1641,102 @@ async def voice_control(file: UploadFile = File(...), session_id: str = Query(de
             }
 
         raw_text = asr_res[0]["text"]
-        recognized_text = clean_text(raw_text)
+        # ★ 统一预处理管道：洗标点/唤醒词残留/填充词 + 热词纠错 + 同音纠错
+        recognized_text = preprocess_voice_text(raw_text)
 
-        # === 多轮对话上下文 ===
-        # 检查是否有待确认的消歧上下文
+        # ★ 空指令早退：避免无效文本触发 ASR 之后的 NLU / LLM / 上下文流程
+        if is_effective_empty(recognized_text):
+            return {
+                "code": 200,
+                "text": "",
+                "intent": None,
+                "method": "preprocess",
+                "confidence": 0.0,
+                "need_clarification": True,
+                "reply": "未检测到有效语音指令，请重新表达",
+                "device_state": None,
+                "session_id": session_id,
+            }
+
+        # === 多轮对话上下文（需求 2 槽位补全 + 需求 3 改口重置） ===
         pending = dialog_manager.get_pending(session_id)
-        if pending and is_clarification_response(recognized_text):
-            room = extract_room(recognized_text)
-            if room:
-                resolved_intent = pending.resolve_with_room(room)
-                if resolved_intent:
-                    print(f"[Dialog] 消歧回复 '{recognized_text}' → room={room}, device_id={resolved_intent['device_id']}")
-                    dialog_manager.clear(session_id)
-                    execution = await execute_command(resolved_intent)
-                    return {
-                        "code": 200 if execution["success"] else execution["code"],
-                        "text": recognized_text,
-                        "intent": resolved_intent,
-                        "method": "context",
-                        "confidence": 1.0,
-                        "need_clarification": False,
-                        "reply": execution["message"],
-                        "device_state": execution.get("state_snapshot"),
-                        "session_id": session_id,
-                    }
-            # 提取不到房间，继续走正常流程
-
-        # 新指令：清除旧上下文
-        if pending and not is_clarification_response(recognized_text):
-            dialog_manager.clear(session_id)
+        if pending:
+            # 情况A：是消歧回复（房间名/设备名）→ 合并槽位 + 立即执行
+            if is_clarification_response(recognized_text, pending):
+                room_slug = extract_room(recognized_text)
+                if not room_slug:
+                    room_cn = extract_room_cn(recognized_text)
+                    if room_cn:
+                        from dialog_context import ROOM_KEYWORDS
+                        room_slug = ROOM_KEYWORDS.get(room_cn)
+                if room_slug:
+                    resolved_intent = pending.resolve_with_room(room_slug)
+                    if resolved_intent:
+                        print(f"[Dialog][Voice] 消歧回复 '{recognized_text}' → room={room_slug}, device_id={resolved_intent['device_id']}")
+                        dialog_manager.clear(session_id, reason="clarification_resolved")
+                        if resolved_intent.get("device_id"):
+                            set_last_device(session_id, resolved_intent["device_id"])
+                        execution = await execute_command(resolved_intent)
+                        return {
+                            "code": 200 if execution.get("success", False) else execution.get("code", 500),
+                            "text": recognized_text,
+                            "intent": resolved_intent,
+                            "method": "context",
+                            "confidence": 1.0,
+                            "need_clarification": False,
+                            "reply": execution.get("message", "指令已执行"),
+                            "device_state": execution.get("state_snapshot"),
+                            "session_id": session_id,
+                        }
+            # 情况B：有 pending 但用户改口 / 提取不到房间 → 清 pending，按新指令重处理
+            dialog_manager.clear(session_id, reason="user_changed_mind")
+            print(f"[Dialog][Voice] 用户改口或非澄清回复: '{recognized_text}'，清空 pending，重新解析")
 
         # C. 混合意图解析（规则优先 + LLM 兜底消歧）
         nlu_res = hybrid_parse_intent(recognized_text)
 
         # LLM 也认为需要消歧 / 高风险设备必须确认 -> 询问用户
         if nlu_res.get("need_clarification"):
+            from dialog_context import (
+                GENERIC_DEV_TO_TYPE, count_devices_of_type,
+                get_candidate_rooms_for_type, is_generic_device_id,
+            )
             intent_data = nlu_res.get("intent") or {}
             device_id = intent_data.get("device_id", "")
             device_name = intent_data.get("device_name", "该设备")
+            dev_type = GENERIC_DEV_TO_TYPE.get(device_id, "")
             risk = get_device_risk(device_id) if device_id else "unknown"
-            candidates = {
-                "air_conditioner": ["卧室空调", "客厅空调"],
-                "light": ["卧室灯", "客厅灯"],
-                "curtain": ["卧室窗帘", "客厅窗帘"],
-                "tv": ["卧室电视", "客厅电视"],
-            }
-            options = candidates.get(device_id, [])
-            options_text = "、".join(options) if options else "不同房间的同类设备"
 
-            # 保存上下文，等待用户消歧回复
+            # 动态候选房间（基于 DEVICE_STATES 实际设备，不再硬编码）
+            candidates_cn: list = []
+            target_val = None
+            action_label = intent_data.get("action") or ""
+            if dev_type and count_devices_of_type(dev_type) > 1:
+                candidates_cn = get_candidate_rooms_for_type(dev_type)
+                # clamp target_val（空调温度 16-30 等）
+                from smart_brain import _extract_target_val_with_clamp
+                target_val = _extract_target_val_with_clamp(intent_data, dev_type)
+                if not action_label and dev_type == "ac":
+                    action_label = "set_temperature"
+
+            # 保存完整的 pending_intent（结构化字段 + 候选房间）
             if intent_data:
-                dialog_manager.save_pending(session_id, intent_data, recognized_text)
+                pending = dialog_manager.save_pending(
+                    session_id=session_id,
+                    intent=intent_data,
+                    original_text=recognized_text,
+                    target_device_type=dev_type,
+                    target_val=target_val,
+                    action_label=action_label,
+                    candidate_rooms_cn=candidates_cn,
+                )
+                clarification_q = build_clarification_question(pending)
+                pending_slot = pending.to_slot_dict()
+            else:
+                clarification_q = f"您想操作的是哪个房间的{device_name}？"
+                pending_slot = {}
+
+            print(f"[VoiceControl] 需要消歧: type={dev_type}, candidates={candidates_cn}, reply={clarification_q}")
 
             return {
                 "code": 200,
@@ -1640,7 +1747,8 @@ async def voice_control(file: UploadFile = File(...), session_id: str = Query(de
                 "need_clarification": True,
                 "risk_level": risk,
                 "intent": nlu_res.get("intent"),
-                "reply": f"您想操作的是哪个房间的{device_name}？可选：{options_text}",
+                "reply": clarification_q,
+                "pending_intent": pending_slot,
                 "session_id": session_id,
             }
 
@@ -1704,10 +1812,33 @@ class TTSRequest(BaseModel):
 
 @app.post("/api/v1/tts")
 async def text_to_speech(req: TTSRequest):
-    """文本转语音，返回音频文件"""
+    """文本转语音，返回音频文件。空/纯标点文本返回 200 + 零字节占位音频（不再抛 400/500）。"""
     voice_name = CHINESE_VOICES.get(req.voice, req.voice)
     task_id = str(uuid.uuid4())
     output_path = f"temp_tts_{task_id}.mp3"
+
+    # ★【TTS 防空闸门 0 层：/api/v1/tts 入口】空/纯空白/纯标点 → 直接 200 + 占位 MP3，不调 edge-tts
+    import re as _re_local
+    _tts_in = (req.text or "").strip()
+    _punct_stripped = _re_local.sub(
+        r"[\s。，！？、；：,.!?;:'\"()（）《》【】\[\]<>/\\\-—…·]",
+        "",
+        _tts_in,
+    )
+    if not _punct_stripped:
+        try:
+            with open(output_path, "wb") as _f:
+                pass
+            print(f"[TTS-SAFEGUARD] /api/v1/tts 文本为空/纯标点，生成 0 字节占位 MP3: {output_path!r}")
+            headers = {"X-TTS-Empty": "1"}
+            return FileResponse(
+                output_path,
+                media_type="audio/mpeg",
+                filename=f"tts_{task_id}.mp3",
+                headers=headers,
+            )
+        except Exception as _e:
+            raise HTTPException(status_code=500, detail=f"生成占位音频失败: {str(_e)}")
 
     try:
         await synthesize(req.text, output_path, voice=voice_name, rate=req.rate, volume=req.volume)
@@ -1786,6 +1917,11 @@ async def voice_to_speech_reply(
             raise HTTPException(status_code=500, detail="音频未识别出有效文字")
 
         recognized_text = clean_text(asr_res[0]["text"])
+        # ★ main.py 最外层：ASR 同音校正（语音接口 + 文本接口都要走一次，保证后续所有流程用校正后文本）
+        corrected = asr_phonetic_correct(recognized_text)
+        if corrected != recognized_text:
+            print(f"[ASR] ★ 拼音校正: '{recognized_text}' → '{corrected}'")
+        recognized_text = corrected
         print(f"[ASR] 识别结果: {recognized_text}")
 
         # 获取回复文本
@@ -1801,13 +1937,18 @@ async def voice_to_speech_reply(
             # 本地模式：直接用本地 NLU
             intents = parse_multi_intent(recognized_text, session_id)
             if intents:
-                reply_text = await batch_execute_intents(intents, session_id)
+                reply_text = await batch_execute_intents(intents, session_id, recognized_text)
             else:
                 context_reply = await handle_context_clarification(recognized_text, session_id)
                 if context_reply:
                     reply_text = context_reply
                 else:
                     reply_text = "抱歉，无法识别您的指令。"
+
+        # —— ★【TTS 防空闸门 第二层：voice_tts】调用 _tts_file_response 前再兜一次 ——
+        if not isinstance(reply_text, str) or not reply_text.strip():
+            reply_text = "操作已完成。"
+            print(f"[Reply-Safe] voice_tts: reply_text 为空，强制兜底 → {reply_text!r}")
 
         print(f"[TTS] 合成文本: {reply_text}")
 
@@ -1843,7 +1984,13 @@ async def _tts_file_response(
 
     减少 text_chat / voice_tts 等端点的重复代码。
     自动处理：文本清洗 → 合成 → stale 文件清理 → 元数据编码 → FileResponse。
+
+    ★【TTS 防空闸门 第一层】：进入合成引擎前强制兜底，彻底杜绝空文本触发 TTS 崩溃。
     """
+    if not isinstance(reply_text, str) or not reply_text.strip():
+        reply_text = "操作已完成。"
+        print(f"[TTS-SAFEGUARD] _tts_file_response 收到空文本，强制兜底 → {reply_text!r}")
+
     # Clean + synthesize via the new helper
     resolved_voice = CHINESE_VOICES.get(voice) if voice in CHINESE_VOICES else voice
     result = await synthesize_to_response(
@@ -1853,6 +2000,7 @@ async def _tts_file_response(
     )
     tts_path = result["file_path"]
     cleaned_text = result["cleaned_text"]
+    is_empty_tts = bool(result.get("empty"))
 
     # URL-encode metadata for HTTP header compatibility
     meta = urllib.parse.urlencode(
@@ -1865,14 +2013,19 @@ async def _tts_file_response(
         quote_via=urllib.parse.quote,
     )
 
+    # X-TTS-Empty: 前端识别到=1且size==0时，应静默跳过播放（不再把"音频文件为空"当异常弹窗）
+    extra_headers = {
+        "X-Voice-Meta": meta,
+        "X-Device-States": state_snapshot,
+    }
+    if is_empty_tts:
+        extra_headers["X-TTS-Empty"] = "1"
+
     return FileResponse(
         tts_path,
         media_type="audio/mpeg",
         filename=f"reply_{uuid.uuid4().hex[:12]}.mp3",
-        headers={
-            "X-Voice-Meta": meta,
-            "X-Device-States": state_snapshot,
-        },
+        headers=extra_headers,
     )
 
 
@@ -1887,45 +2040,87 @@ async def text_chat(
 ):
     """
     文字对话：直接传入文字 → (本地NLU/Dify) → 文本回复 → TTS → 返回音频
+
+    多轮会话处理顺序（严格遵守需求 2 & 3）：
+      1. 先查 pending_intent（handle_context_clarification）
+         a. 澄清回复（卧室/客厅）→ 合并槽位 execute_command → 播报最终结果
+         b. 用户改口（非房间/设备名）→ 清 pending，__NEW_CMD__ 哨兵 → 按新指令重新走 SmartBrain
+         c. 无 pending → None，正常走流程
+      2. 无 pending 或 已改口 → 调用 SmartBrain 处理新指令
+         - SmartBrain 内部会在设备歧义时 save_pending 并反问（需求 1）
     """
     if not text or not text.strip():
         raise HTTPException(status_code=400, detail="文字内容不能为空")
+
+    # ★ main.py 最外层：ASR 同音校正（文本接口也走一次，便于直接用模拟错别字测试）
+    corrected = asr_phonetic_correct(text)
+    if corrected != text:
+        print(f"[TextChat] ★ 拼音校正: '{text}' → '{corrected}'")
+    text = corrected
 
     task_id = str(uuid.uuid4())
     tts_path = f"temp_tts_{task_id}.mp3"
 
     try:
-        # 获取回复文本
         reply_text = ""
         if mode in ("smart", "dify"):
-            # Smart 模式 / Dify 模式：统一走本地大脑（意图路由 + 设备控制 + RAG）
+            # ---- Step 1: 优先处理多轮槽位补全（需求 2 & 3） ----
+            ctx_result = await handle_context_clarification(text, session_id)
+            if ctx_result is not None and ctx_result != "__NEW_CMD__":
+                # 情况 1-a：已成功完成槽位补全 + 设备控制，直接播报
+                reply_text = ctx_result
+                print(f"[TextChat][槽位补全] 输入: {text} → 回复: {reply_text}")
+                # —— ★【TTS 防空闸门 第三层：text_chat #1】 ——
+                if not isinstance(reply_text, str) or not reply_text.strip():
+                    reply_text = "操作已完成。"
+                    print(f"[Reply-Safe] text_chat(槽位补全): reply_text 为空，强制兜底 → {reply_text!r}")
+                return await _tts_file_response(reply_text, voice=voice, asr_text=text)
+            # ctx_result == "__NEW_CMD__" → 情况 1-b：用户改口，清完 pending 后按新指令重处理
+
+            # ---- Step 2: 无 pending / 已改口 → SmartBrain 处理新指令 ----
             from smart_brain import process_with_scene
-            print(f"[SmartBrain] 调用本地大脑...")
+            print(f"[SmartBrain] 调用本地大脑... (context={'NEW_CMD' if ctx_result == '__NEW_CMD__' else 'no_pending'})")
             brain_result = await process_with_scene(text, session_id)
             reply_text = brain_result.get("reply", "指令处理失败")
-            print(f"[SmartBrain] 回复成功: {reply_text[:50]}...")
+
+            # （可选）歧义时把 pending_intent slot 信息打到日志，前端/调试用
+            if brain_result.get("need_clarification"):
+                print(f"[TextBrain][歧义反问] pending_intent={brain_result.get('pending_intent')}")
+
+            print(f"[SmartBrain] 回复成功: {reply_text[:60]}...")
             print(f"[TextChat] 输入: {text} → 回复: {reply_text}")
 
+            # —— ★【TTS 防空闸门 第三层：text_chat #2】 ——
+            if not isinstance(reply_text, str) or not reply_text.strip():
+                reply_text = "操作已完成。"
+                print(f"[Reply-Safe] text_chat(SmartBrain): reply_text 为空，强制兜底 → {reply_text!r}")
             # TTS + FileResponse via shared helper
             return await _tts_file_response(reply_text, voice=voice, asr_text=text)
         else:
             # 本地模式：直接用本地 NLU
-            intents = parse_multi_intent(text, session_id)
-            if intents:
-                reply_text = await batch_execute_intents(intents, session_id)
+            ctx_result = await handle_context_clarification(text, session_id)
+            if ctx_result is not None and ctx_result != "__NEW_CMD__":
+                reply_text = ctx_result
             else:
-                context_reply = await handle_context_clarification(text, session_id)
-                if context_reply:
-                    reply_text = context_reply
+                intents = parse_multi_intent(text, session_id)
+                if intents:
+                    reply_text = await batch_execute_intents(intents, session_id, text)
                 else:
                     reply_text = "抱歉，无法识别您的指令。"
 
         print(f"[TextChat] 输入: {text} → 回复: {reply_text}")
 
+        # —— ★【TTS 防空闸门 第三层：text_chat #3】 ——
+        if not isinstance(reply_text, str) or not reply_text.strip():
+            reply_text = "操作已完成。"
+            print(f"[Reply-Safe] text_chat(本地模式): reply_text 为空，强制兜底 → {reply_text!r}")
+
         # TTS + FileResponse via shared helper
         return await _tts_file_response(reply_text, voice=voice, asr_text=text)
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"服务错误: {str(e)}")
 
 

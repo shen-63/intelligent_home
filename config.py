@@ -1,5 +1,12 @@
 import os
 
+# 从项目根目录的 .env 加载环境变量（该文件已被 .gitignore 排除，不会提交到仓库）
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 SILICONFLOW_API_KEY = os.environ.get("SILICONFLOW_API_KEY", "")
 SILICONFLOW_BASE_URL = os.environ.get("SILICONFLOW_BASE_URL", "https://api.siliconflow.cn/v1")
 
